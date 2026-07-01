@@ -1,0 +1,40 @@
+# Tasks
+
+- [x] **Phase 1: Branding & Logo**
+  - [x] Generate MYLA square logo (`logo.png`)
+  - [x] Generate MYLA wide logo (`logo-wide.png`)
+  - [x] Update `app.json` configuration and references
+- [ ] **Phase 2: Design System & Theme**
+  - [ ] Create `theme.ts` for design tokens
+  - [ ] Create `.env.example` file
+- [ ] **Phase 3: Splash Screen**
+  - [ ] Create animated `SplashScreen.tsx`
+  - [ ] Update `app.json` splash config
+- [ ] **Phase 4: Landing / Wallet Connect Screen**
+  - [ ] Implement `LandingScreen.tsx` with themed styling
+  - [ ] Implement `useWallet.ts` hook
+  - [ ] Implement `WalletContext.tsx`
+- [ ] **Phase 5: Match Feed — Snapping Vertical Scroll**
+  - [ ] Implement `MatchFeedScreen.tsx` with snapping FlatList
+  - [ ] Create `MatchCard.tsx` component
+  - [ ] Create `SwipeableMarket.tsx` component
+  - [ ] Create `MarketDropdown.tsx` component
+- [ ] **Phase 6: TxODDS API Integration**
+  - [ ] Implement `txodds.ts` service with authorization
+  - [ ] Create `txoddsTypes.ts` types
+  - [ ] Update `useMatchFeed.ts` hook
+- [ ] **Phase 7: DuelDuck Prediction Market Integration**
+  - [ ] Implement `duelduck.ts` service
+  - [ ] Create `duelduckTypes.ts` types
+  - [ ] Integrate DuelDuck inside `markets.ts`
+- [ ] **Phase 8: Prediction Confirmation & Feedback**
+  - [ ] Create `PredictionModal.tsx` bottom sheet
+  - [ ] Create `usePredictionFlow.ts` hook
+- [ ] **Phase 9: Navigation Restructure & Deep Linking**
+  - [ ] Update `AppNavigator.tsx` stack routing
+  - [ ] Create `linking.ts` config for deep linking
+  - [ ] Create `useDeepLink.ts` hook
+  - [ ] Create `ShareButton.tsx` component
+- [ ] **Phase 10: Polish & Animations**
+  - [ ] Add smooth gestures and counter animations
+  - [ ] Verify complete user flow
