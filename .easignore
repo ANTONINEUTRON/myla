@@ -1,0 +1,52 @@
+# Learn more https://docs.expo.dev/eas-host/expo-cli/
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/android
+/ios
+
+# project docs — not needed for EAS builds
+/claude/
+*.md
+PITCH.md
+REQUIREMENTS.md
+SP_BOUNTY.md
+
+# backend & contracts — not part of the mobile app build
+/backend
+/contracts
