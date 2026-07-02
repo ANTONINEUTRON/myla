@@ -66,9 +66,12 @@ export interface UserProfile {
 
 // Navigation Types
 export type RootStackParamList = {
+  Splash: undefined;
+  Landing: undefined;
   Home: undefined;
   MatchDetails: { matchId: string };
   Wallet: undefined;
   Profile: undefined;
   Leaderboard: undefined;
+  MatchFeed: undefined;
 };

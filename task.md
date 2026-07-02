@@ -7,13 +7,13 @@
 - [x] **Phase 2: Design System & Theme**
   - [x] Create `theme.ts` for design tokens
   - [x] Create `.env.example` file
-- [ ] **Phase 3: Splash Screen**
-  - [ ] Create animated `SplashScreen.tsx`
-  - [ ] Update `app.json` splash config
-- [ ] **Phase 4: Landing / Wallet Connect Screen**
-  - [ ] Implement `LandingScreen.tsx` with themed styling
-  - [ ] Implement `useWallet.ts` hook
-  - [ ] Implement `WalletContext.tsx`
+- [x] **Phase 3: Splash Screen**
+  - [x] Create animated `SplashScreen.tsx`
+  - [x] Update `app.json` splash config
+- [x] **Phase 4: Landing / Wallet Connect Screen**
+  - [x] Implement `LandingScreen.tsx` with themed styling
+  - [x] Implement `useWallet.ts` hook
+  - [x] Implement `WalletContext.tsx`
 - [ ] **Phase 5: Match Feed — Snapping Vertical Scroll**
   - [ ] Implement `MatchFeedScreen.tsx` with snapping FlatList
   - [ ] Create `MatchCard.tsx` component

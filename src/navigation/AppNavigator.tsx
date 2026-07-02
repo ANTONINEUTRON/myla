@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { RootStackParamList } from '../types';
+import { useWallet } from '../hooks/useWallet';
 
+import SplashScreen from '../screens/SplashScreen';
+import LandingScreen from '../screens/LandingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import MatchDetailsScreen from '../screens/MatchDetailsScreen';
 import WalletScreen from '../screens/WalletScreen';
@@ -29,7 +32,7 @@ function HomeTabs() {
       }}
     >
       <Tab.Screen
-        name="Home"
+        name="Matches"
         component={HomeScreen}
         options={{
           tabBarLabel: 'Matches',
@@ -64,7 +67,26 @@ function HomeTabs() {
   );
 }
 
-export default function AppNavigator() {
+function MainContent() {
+  const { isConnected } = useWallet();
+  const [showLanding, setShowLanding] = useState(!isConnected);
+  const [showSplash, setShowSplash] = useState(true);
+
+  if (showSplash) {
+    return (
+      <SplashScreen
+        onFinish={() => {
+          setShowSplash(false);
+          setShowLanding(!isConnected);
+        }}
+      />
+    );
+  }
+
+  if (showLanding) {
+    return <LandingScreen onConnected={() => setShowLanding(false)} />;
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -73,4 +95,8 @@ export default function AppNavigator() {
       </Stack.Navigator>
     </NavigationContainer>
   );
+}
+
+export default function AppNavigator() {
+  return <MainContent />;
 }
