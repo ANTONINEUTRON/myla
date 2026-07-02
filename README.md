@@ -2,9 +2,9 @@
 
 > **A real-time micro-prediction game for the Solana Seeker, powered by TxODDS live World Cup data.**
 
-![World Cup Hackathon](https://superteam.fun/_next/image/?url=https%3A%2F%2Fres.cloudinary.com%2Fdgvnuwspr%2Fimage%2Fupload%2Fv1781866613%2Fassets%2Fhackathon%2Fworld-cup%2FaltLogo.png&w=1080&q=75)
+![World Cup Hackathon]()
 
-## 🏆 Superteam World Cup Hackathon — Track 3: Trading Tools & Agents
+## Superteam World Cup Hackathon — Track 3: Trading Tools & Agents
 
 **Prize Pool:** $16,000 USDT  
 **Timeline:** June 24 – July 19, 2026  
@@ -13,7 +13,7 @@
 
 ---
 
-## 🎯 The Pitch
+## The Pitch
 
 **Every minute of a World Cup match is a moment of drama — MYLA turns each moment into a prediction you can stake on.**
 
@@ -30,7 +30,7 @@ Fans tap their predictions, stake small amounts of SOL, and watch the odds shift
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 ### Live Match Feed
 A swipeable card interface (like TikTok/Stories) showing active micro-markets during a match. Each card shows the current odds, time remaining, and stake pool.
@@ -60,7 +60,7 @@ Dynamic probability meter showing how odds shift with each match event. Watch th
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|

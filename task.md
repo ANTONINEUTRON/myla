@@ -4,9 +4,9 @@
   - [x] Generate MYLA square logo (`logo.png`)
   - [x] Generate MYLA wide logo (`logo-wide.png`)
   - [x] Update `app.json` configuration and references
-- [ ] **Phase 2: Design System & Theme**
-  - [ ] Create `theme.ts` for design tokens
-  - [ ] Create `.env.example` file
+- [x] **Phase 2: Design System & Theme**
+  - [x] Create `theme.ts` for design tokens
+  - [x] Create `.env.example` file
 - [ ] **Phase 3: Splash Screen**
   - [ ] Create animated `SplashScreen.tsx`
   - [ ] Update `app.json` splash config
