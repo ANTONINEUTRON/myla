@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { useWallet } from '../hooks/useWallet';
 
 import SplashScreen from '../screens/SplashScreen';
 import LandingScreen from '../screens/LandingScreen';
-import HomeScreen from '../screens/HomeScreen';
+import MatchFeedScreen from '../screens/MatchFeedScreen';
 import MatchDetailsScreen from '../screens/MatchDetailsScreen';
 import WalletScreen from '../screens/WalletScreen';
 
@@ -16,6 +17,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
 function HomeTabs() {
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -23,20 +25,22 @@ function HomeTabs() {
         tabBarStyle: {
           backgroundColor: '#1E293B',
           borderTopColor: '#334155',
-          paddingBottom: 8,
+          paddingBottom: insets.bottom + 4,
           paddingTop: 8,
-          height: 60,
+          height: 56 + insets.bottom,
         },
-        tabBarActiveTintColor: '#38BDF8',
+        tabBarActiveTintColor: '#FF6B35',
         tabBarInactiveTintColor: '#64748B',
       }}
     >
       <Tab.Screen
         name="Matches"
-        component={HomeScreen}
+        component={MatchFeedScreen}
         options={{
           tabBarLabel: 'Matches',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚽</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="football" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -44,7 +48,9 @@ function HomeTabs() {
         component={WalletScreen}
         options={{
           tabBarLabel: 'Wallet',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👛</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -52,15 +58,9 @@ function HomeTabs() {
         component={WalletScreen}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👤</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Leaderboard"
-        component={WalletScreen}
-        options={{
-          tabBarLabel: 'Leaderboard',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🏆</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>

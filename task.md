@@ -14,11 +14,11 @@
   - [x] Implement `LandingScreen.tsx` with themed styling
   - [x] Implement `useWallet.ts` hook
   - [x] Implement `WalletContext.tsx`
-- [ ] **Phase 5: Match Feed — Snapping Vertical Scroll**
-  - [ ] Implement `MatchFeedScreen.tsx` with snapping FlatList
-  - [ ] Create `MatchCard.tsx` component
-  - [ ] Create `SwipeableMarket.tsx` component
-  - [ ] Create `MarketDropdown.tsx` component
+- [x] **Phase 5: Match Feed — Snapping Vertical Scroll**
+  - [x] Implement `MatchFeedScreen.tsx` with snapping FlatList
+  - [x] Create `MatchCard.tsx` component
+  - [x] Create `SwipeableMarket.tsx` component
+  - [x] Create `MarketDropdown.tsx` component
 - [ ] **Phase 6: TxODDS API Integration**
   - [ ] Implement `txodds.ts` service with authorization
   - [ ] Create `txoddsTypes.ts` types
