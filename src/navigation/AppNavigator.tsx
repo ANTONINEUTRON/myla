@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { useWallet } from '../hooks/useWallet';
+import { useTxOddsAuth } from '../hooks/useTxOddsAuth';
 
 import SplashScreen from '../screens/SplashScreen';
 import LandingScreen from '../screens/LandingScreen';
+import ActivatingScreen from '../screens/ActivatingScreen';
 import MatchFeedScreen from '../screens/MatchFeedScreen';
 import MatchDetailsScreen from '../screens/MatchDetailsScreen';
 import WalletScreen from '../screens/WalletScreen';
@@ -23,8 +25,8 @@ function HomeTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#1E293B',
-          borderTopColor: '#334155',
+          backgroundColor: '#0F1219',
+          borderTopColor: 'rgba(255,255,255,0.06)',
           paddingBottom: insets.bottom + 4,
           paddingTop: 8,
           height: 56 + insets.bottom,
@@ -68,25 +70,44 @@ function HomeTabs() {
 }
 
 function MainContent() {
-  const { isConnected } = useWallet();
-  const [showLanding, setShowLanding] = useState(!isConnected);
+  const { isConnected, walletAddress, authToken } = useWallet();
+  const { authState } = useTxOddsAuth();
+
   const [showSplash, setShowSplash] = useState(true);
+  // true while we should show the one-time activation screen
+  const [showActivating, setShowActivating] = useState(false);
+
+  // After wallet connects for first time, show ActivatingScreen
+  useEffect(() => {
+    if (isConnected && authState === 'guest') {
+      setShowActivating(true);
+    }
+  }, [isConnected, authState]);
 
   if (showSplash) {
     return (
       <SplashScreen
-        onFinish={() => {
-          setShowSplash(false);
-          setShowLanding(!isConnected);
-        }}
+        onFinish={() => setShowSplash(false)}
       />
     );
   }
 
-  if (showLanding) {
-    return <LandingScreen onConnected={() => setShowLanding(false)} />;
+  if (!isConnected) {
+    return <LandingScreen onConnected={() => {}} />;
   }
 
+  // First-time setup: show activation flow before the feed
+  if (showActivating && authState !== 'activated') {
+    return (
+      <ActivatingScreen
+        walletAddress={walletAddress ?? ''}
+        authToken={authToken}
+        onDone={() => setShowActivating(false)}
+      />
+    );
+  }
+
+  // Connected (+ activated or skipped) → show main app
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -96,6 +117,7 @@ function MainContent() {
     </NavigationContainer>
   );
 }
+
 
 export default function AppNavigator() {
   return <MainContent />;

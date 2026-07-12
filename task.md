@@ -19,10 +19,17 @@
   - [x] Create `MatchCard.tsx` component
   - [x] Create `SwipeableMarket.tsx` component
   - [x] Create `MarketDropdown.tsx` component
-- [ ] **Phase 6: TxODDS API Integration**
-  - [ ] Implement `txodds.ts` service with authorization
-  - [ ] Create `txoddsTypes.ts` types
-  - [ ] Update `useMatchFeed.ts` hook
+- [x] **Phase 6: TxODDS API Integration**
+  - [x] Implement `txodds.ts` service with authorization
+  - [x] Create `txoddsTypes.ts` types
+  - [x] Update `useMatchFeed.ts` hook
+- [x] **Phase 6.5: Fix TxODDS Auth & Data Visibility**
+  - [x] Fix double `/api/` URL bug in `txodds.ts`
+  - [x] Add `initGuestSession()` — auto-calls `POST /auth/guest/start`
+  - [x] Add `activateSubscription()` for post-on-chain activation
+  - [x] Add seed data fallback (`worldcupSeed.ts`) with real WC2026 fixture IDs
+  - [x] Create `useTxOddsAuth.ts` hook for auth lifecycle management
+  - [x] Update `useMatchFeed.ts` to wait for auth + fallback to seed data
 - [ ] **Phase 7: DuelDuck Prediction Market Integration**
   - [ ] Implement `duelduck.ts` service
   - [ ] Create `duelduckTypes.ts` types

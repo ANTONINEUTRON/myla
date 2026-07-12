@@ -222,6 +222,58 @@ Complete rewrite of the TxODDS service:
 
 ---
 
+### Phase 6.5: Fix TxODDS Auth & Data Visibility
+
+Fix the broken data pipeline — games and predictions are not showing up because the TxODDS service is never initialized and has URL construction bugs.
+
+#### Root Cause Analysis
+
+1. **Service never configured**: `txoddsService.configure()` is never called — `isConfigured` is always `false` so every API call returns `[]`.
+2. **Double `/api/` URL bug**: `baseURL` is set to `.../api` but paths also start with `/api/...` → requests hit `.../api/api/fixtures/snapshot` (404).
+3. **Free tier auth not implemented**: The free tier requires a **guest JWT** from `POST /auth/guest/start` + an on-chain subscription + activation. Nothing in the current code does this.
+4. **No fallback data**: When the API isn't yet activated, no matches or markets show — users see a blank screen.
+
+#### What's in the TxODDS Free Tier
+
+- **Service Level 1**: World Cup + International Friendlies with 60-second delay (free)
+- **Service Level 12**: World Cup + International Friendlies real-time (free on mainnet)
+- **Auth flow**: `POST /auth/guest/start` → on-chain `subscribe` tx → `POST /api/token/activate` → use `Bearer {jwt}` + `X-Api-Token: {token}`
+- **Known fixture IDs** from the published schedule (usable as seed data)
+
+#### [MODIFY] [txodds.ts](file:///c:/Users/antoni/web_projects/myla/src/services/txodds.ts)
+
+Fix and rewrite:
+- **Fix baseURL**: Use `https://txline.txodds.com` (no `/api` suffix) — paths in requests use `/api/...`
+- **Add `initGuestSession()`**: Auto-calls `POST /auth/guest/start` to get JWT, stored in memory + `AsyncStorage`
+- **Add `activateWithToken(txSig, walletSignature, leagues)`**: Calls `POST /api/token/activate` and stores the API token
+- **Add `isGuestOnly` state**: When only guest JWT is present (no activated token), only `GET /api/fixtures/snapshot` is available (no odds/scores without token)
+- **Add seed fixtures**: Hardcode the World Cup 2026 fixture schedule (with real fixture IDs) as fallback data when API returns empty or errors
+
+#### [NEW] [useTxOddsAuth.ts](file:///c:/Users/antoni/web_projects/myla/src/hooks/useTxOddsAuth.ts)
+
+- Hook that manages the TxODDS auth lifecycle
+- On mount: checks `AsyncStorage` for cached JWT + API token
+- If no cached JWT: calls `POST /auth/guest/start` and saves the JWT
+- Exposes `authState`: `'loading' | 'guest' | 'activated' | 'error'`
+- Exposes `activateSubscription(txSig, walletSignature)` for after on-chain subscribe
+
+#### [MODIFY] [useMatchFeed.ts](file:///c:/Users/antoni/web_projects/myla/src/hooks/useMatchFeed.ts)
+
+- Integrate `useTxOddsAuth` — wait for auth before fetching
+- When auth state is `'guest'` or `'activated'`, proceed with API calls
+- When API returns empty (no subscribed fixtures yet), fall back to **seed fixture data** with mock scores/markets
+- Seed data: use real World Cup 2026 fixture IDs from the schedule
+
+#### [NEW] [worldcupSeed.ts](file:///c:/Users/antoni/web_projects/myla/src/data/worldcupSeed.ts)
+
+Hardcoded World Cup 2026 fixture data from the TxODDS schedule:
+- Real fixture IDs (e.g. `18209181` = France vs Morocco Quarter-final)
+- Correct team names, start times
+- Realistic mock scores for past matches
+- Mock markets with YES/NO outcomes for demonstration
+
+---
+
 ### Phase 7: DuelDuck Prediction Market Integration
 
 Integrate DuelDuck for on-chain prediction creation, voting, and settlement.
@@ -428,6 +480,7 @@ flowchart TD
 | 4 | Landing / wallet connect screen (themed) | ~3 hours |
 | 5 | Match feed + swipe mechanics | ~6 hours |
 | 6 | TxODDS API integration | ~4 hours |
+| 6.5 | Fix TxODDS auth & data visibility (guest JWT + seed data) | ~2 hours |
 | 7 | DuelDuck prediction market integration | ~4 hours |
 | 8 | Prediction confirmation flow | ~3 hours |
 | 9 | Navigation restructure + deep linking | ~3 hours |
@@ -455,6 +508,7 @@ flowchart TD
 1. After Phase 3: Splash screen animates and transitions correctly
 2. After Phase 5: Can vertically scroll through matches and swipe left/right
 3. After Phase 6: Real match data appears from TxODDS
+4. After Phase 6.5: Games and prediction markets display correctly even before API token activation
 4. After Phase 7: Predictions submit to DuelDuck and record on Solana
 5. After Phase 9: Deep links open specific matches
 6. After Phase 10: Full flow is polished and demo-ready

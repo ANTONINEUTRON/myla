@@ -1,109 +1,66 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Match, Market, MarketType } from '../types';
+import { txoddsService } from '../services/txodds';
 
-// Mock data for development
-const MOCK_MATCHES: Match[] = [
-  {
-    id: '1',
-    homeTeam: 'Brazil',
-    awayTeam: 'Croatia',
-    homeScore: 2,
-    awayScore: 1,
-    minute: 67,
-    status: 'live',
-    startTime: '2026-06-30T18:00:00Z',
-  },
-  {
-    id: '2',
-    homeTeam: 'France',
-    awayTeam: 'Senegal',
-    homeScore: 0,
-    awayScore: 0,
-    minute: 23,
-    status: 'live',
-    startTime: '2026-06-30T20:00:00Z',
-  },
-  {
-    id: '3',
-    homeTeam: 'Argentina',
-    awayTeam: 'Japan',
-    homeScore: 0,
-    awayScore: 0,
-    minute: 0,
-    status: 'upcoming',
-    startTime: '2026-07-01T16:00:00Z',
-  },
-];
-
-const MOCK_MARKETS: Record<string, Market[]> = {
-  '1': [
-    {
-      id: 'm1',
-      matchId: '1',
-      type: 'NEXT_GOAL_TIMER',
-      question: 'Will a goal be scored in the next 15 minutes?',
-      outcomes: [
-        { id: 'yes-1', label: 'YES', odds: 35 },
-        { id: 'no-1', label: 'NO', odds: 65 },
-      ],
-      status: 'open',
-      stakePool: 12.5,
-      timeRemaining: 840,
-      opensAt: '2026-06-30T18:00:00Z',
-      closesAt: '2026-06-30T18:15:00Z',
-    },
-    {
-      id: 'm2',
-      matchId: '1',
-      type: 'NEXT_CORNER',
-      question: 'Will Brazil win the next corner?',
-      outcomes: [
-        { id: 'yes-2', label: 'YES', odds: 52 },
-        { id: 'no-2', label: 'NO', odds: 48 },
-      ],
-      status: 'open',
-      stakePool: 8.2,
-      timeRemaining: 600,
-      opensAt: '2026-06-30T18:00:00Z',
-      closesAt: '2026-06-30T18:10:00Z',
-    },
-  ],
-  '2': [
-    {
-      id: 'm3',
-      matchId: '2',
-      type: 'NEXT_GOAL_TIMER',
-      question: 'Will a goal be scored in the next 15 minutes?',
-      outcomes: [
-        { id: 'yes-3', label: 'YES', odds: 45 },
-        { id: 'no-3', label: 'NO', odds: 55 },
-      ],
-      status: 'open',
-      stakePool: 5.1,
-      timeRemaining: 1020,
-      opensAt: '2026-06-30T20:00:00Z',
-      closesAt: '2026-06-30T20:15:00Z',
-    },
-  ],
-  '3': [],
-};
-
-// Repeat mock data 3 times for circular scrolling feel
-const CIRCULAR_MATCHES = [...MOCK_MATCHES, ...MOCK_MATCHES, ...MOCK_MATCHES];
+/** Repeat an array N times for a circular-scroll feel with small datasets. */
+function repeatForCircular<T>(arr: T[], times = 3): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < times; i++) result.push(...arr);
+  return result;
+}
 
 export function useMatchFeed() {
-  const [matches, setMatches] = useState<Match[]>(CIRCULAR_MATCHES);
+
+  const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedMarketType, setSelectedMarketType] = useState<MarketType>('NEXT_GOAL_TIMER');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const selectMatch = useCallback((match: Match) => {
+  // ── Fetch fixtures (waits for auth to be ready) ──────────────────
+  const refreshMatches = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fetched = await txoddsService.getFixtures();
+
+      // Sort: live first, then upcoming, then finished
+      const sorted = [...fetched].sort((a, b) => {
+        const order = { live: 0, upcoming: 1, finished: 2 };
+        return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+      });
+
+      // Repeat for circular infinite-scroll feel (only if small dataset)
+      const data = sorted.length > 0 ? repeatForCircular(sorted) : [];
+      setMatches(data);
+    } catch (err: any) {
+      console.error('Failed to fetch matches:', err);
+      setError(err?.message || 'Failed to load matches');
+      setMatches([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    refreshMatches();
+  }, [refreshMatches]);
+
+  // ── Fetch markets when a match is selected ───────────────────────
+  const selectMatch = useCallback(async (match: Match) => {
     setSelectedMatch(match);
-    const matchMarkets = MOCK_MARKETS[match.id] || [];
-    setMarkets(matchMarkets);
-    if (matchMarkets.length > 0) {
-      setSelectedMarketType(matchMarkets[0].type);
+    setMarkets([]);
+    try {
+      const fetched = await txoddsService.getOdds(match.id);
+      setMarkets(fetched);
+      if (fetched.length > 0) {
+        setSelectedMarketType(fetched[0].type);
+      }
+    } catch (err) {
+      console.warn(`Failed to fetch odds for match ${match.id}:`, err);
+      setMarkets([]);
     }
   }, []);
 
@@ -111,20 +68,15 @@ export function useMatchFeed() {
     setSelectedMarketType(type);
   }, []);
 
-  const refreshMatches = useCallback(async () => {
-    setLoading(true);
-    // TODO: Fetch live matches from TxODDS
-    setLoading(false);
-  }, []);
-
-  // Auto-select first match
+  // Auto-select first match when data loads
   useEffect(() => {
     if (matches.length > 0 && !selectedMatch) {
       selectMatch(matches[0]);
     }
   }, [matches, selectedMatch, selectMatch]);
 
-  const currentMarket = markets.find((m) => m.type === selectedMarketType) || markets[0] || null;
+  const currentMarket =
+    markets.find((m) => m.type === selectedMarketType) || markets[0] || null;
 
   return {
     matches,
@@ -133,8 +85,10 @@ export function useMatchFeed() {
     markets,
     currentMarket,
     loading,
+    error,
     selectMatch,
     selectMarketType,
     refreshMatches,
   };
 }
+

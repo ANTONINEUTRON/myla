@@ -15,6 +15,7 @@ export interface WalletState {
   isConnected: boolean;
   isConnecting: boolean;
   balance: number;
+  authToken: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
 }
@@ -24,6 +25,7 @@ export const WalletContext = createContext<WalletState>({
   isConnected: false,
   isConnecting: false,
   balance: 0,
+  authToken: null,
   connect: async () => {},
   disconnect: async () => {},
 });
@@ -79,7 +81,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             const auth = await wallet.authorize({
               identity: {
                 name: 'MYLA',
-                uri: 'https://myla.app',
+                uri: 'https://symbal.fun',
+                icon: 'favicon.ico',
               },
               chain: 'solana:mainnet',
               ...(cachedAuthToken
@@ -152,10 +155,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       isConnected: walletAddress !== null,
       isConnecting,
       balance,
+      authToken: cachedAuthToken,
       connect,
       disconnect,
     }),
-    [walletAddress, balance, isConnecting, connect, disconnect]
+    [walletAddress, balance, isConnecting, cachedAuthToken, connect, disconnect]
   );
 
   return (
