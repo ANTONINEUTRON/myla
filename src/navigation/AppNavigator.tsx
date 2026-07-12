@@ -55,16 +55,6 @@ function HomeTabs() {
           ),
         }}
       />
-      <Tab.Screen
-        name="Profile"
-        component={WalletScreen}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
-        }}
-      />
     </Tab.Navigator>
   );
 }

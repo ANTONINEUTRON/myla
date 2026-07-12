@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Connection, PublicKey } from '@solana/web3.js';
 
 const STORAGE_KEY_AUTH_TOKEN = 'myla_wallet_auth_token';
 
@@ -48,6 +49,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [cachedAuthToken, setCachedAuthToken] = useState<string | null>(null);
 
+  const fetchBalance = useCallback(async (address: string) => {
+    if (address === 'DevWallet111111111111111111111111111111111111' || address.startsWith('DevWallet')) {
+      setBalance(2.5);
+      return;
+    }
+    try {
+      const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+      const pubkey = new PublicKey(Buffer.from(address, 'base64'));
+      const lamports = await connection.getBalance(pubkey);
+      setBalance(lamports / 1e9);
+    } catch (err) {
+      console.warn('Failed to fetch SOL balance:', err);
+    }
+  }, []);
+
   // Try to restore a previous session from AsyncStorage on mount
   useEffect(() => {
     (async () => {
@@ -57,12 +73,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         if (storedAddress && storedToken) {
           setWalletAddress(storedAddress);
           setCachedAuthToken(storedToken);
+          fetchBalance(storedAddress);
         }
       } catch {
         // Storage not available — that's fine, start disconnected
       }
     })();
-  }, []);
+  }, [fetchBalance]);
+
+  // Periodically refresh balance if connected
+  useEffect(() => {
+    if (!walletAddress) return;
+    const interval = setInterval(() => {
+      fetchBalance(walletAddress);
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [walletAddress, fetchBalance]);
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
@@ -125,7 +151,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
       setWalletAddress(address);
       setCachedAuthToken(authToken);
-      setBalance(authToken === 'dev-token' ? 2.5 : 0);
+      await fetchBalance(address);
     } catch (error) {
       await AsyncStorage.multiRemove([
         'myla_wallet_address',

@@ -327,6 +327,7 @@ class TxODDSService {
 
     try {
       const { data } = await this.fullHttp.get<TxFixture[]>('/api/fixtures/snapshot');
+      console.log('[TxODDS] getFixtures raw response data:', JSON.stringify(data, null, 2));
 
       if (!data || data.length === 0) {
         console.log('[TxODDS] API returned 0 fixtures.');
@@ -341,6 +342,7 @@ class TxODDSService {
             `/api/scores/snapshot/${fixture.FixtureId}`,
           );
           scores = scoresRes.data;
+          console.log(`[TxODDS] getScores raw response data for fixture ${fixture.FixtureId}:`, JSON.stringify(scores, null, 2));
         } catch {
           // No scores yet — fixture is upcoming
         }
@@ -385,6 +387,7 @@ class TxODDSService {
       const { data } = await http.get<TxOddsEntry[]>(
         `/api/odds/snapshot/${fixtureId}`,
       );
+      console.log(`[TxODDS] getOdds raw response data for fixture ${fixtureId}:`, JSON.stringify(data, null, 2));
       if (!data || data.length === 0) {
         return [];
       }
@@ -404,6 +407,7 @@ class TxODDSService {
       const { data } = await http.get<TxScoreEntry[]>(
         `/api/scores/snapshot/${fixtureId}`,
       );
+      console.log(`[TxODDS] getScores raw response data for fixture ${fixtureId}:`, JSON.stringify(data, null, 2));
       return data;
     } catch {
       return [];
