@@ -2,15 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Match, Market, MarketType } from '../types';
 import { txoddsService } from '../services/txodds';
 
-/** Repeat an array N times for a circular-scroll feel with small datasets. */
-function repeatForCircular<T>(arr: T[], times = 3): T[] {
-  const result: T[] = [];
-  for (let i = 0; i < times; i++) result.push(...arr);
-  return result;
-}
-
 export function useMatchFeed() {
-
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -25,15 +17,12 @@ export function useMatchFeed() {
     try {
       const fetched = await txoddsService.getFixtures();
 
-      // Sort: live first, then upcoming, then finished
+      // Sort: chronological order (earliest kick-offs first)
       const sorted = [...fetched].sort((a, b) => {
-        const order = { live: 0, upcoming: 1, finished: 2 };
-        return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
       });
 
-      // Repeat for circular infinite-scroll feel (only if small dataset)
-      const data = sorted.length > 0 ? repeatForCircular(sorted) : [];
-      setMatches(data);
+      setMatches(sorted);
     } catch (err: any) {
       console.error('Failed to fetch matches:', err);
       setError(err?.message || 'Failed to load matches');

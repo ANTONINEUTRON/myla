@@ -54,24 +54,54 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
   const homeTeam = f.Participant1IsHome ? f.Participant1 : f.Participant2;
   const awayTeam = f.Participant1IsHome ? f.Participant2 : f.Participant1;
 
+  let startTimeVal: any = f.StartTime;
+  if (typeof startTimeVal === 'string' && /^\d+$/.test(startTimeVal)) {
+    startTimeVal = parseInt(startTimeVal, 10);
+  }
+  const startMs = new Date(startTimeVal).getTime();
+  const nowMs = Date.now();
+
   let status: Match['status'] = 'upcoming';
   let minute = 0;
   let homeScore = 0;
   let awayScore = 0;
 
-  if (scores && scores.length > 0) {
-    const latest = scores[scores.length - 1];
-    status = GAME_PHASE_MAP[latest.GamePhase] || 'upcoming';
-    minute = latest.Minute;
-    const p1Goals = latest.Stats?.[1] ?? 0;
-    const p2Goals = latest.Stats?.[2] ?? 0;
-    if (f.Participant1IsHome) {
-      homeScore = p1Goals;
-      awayScore = p2Goals;
-    } else {
-      homeScore = p2Goals;
-      awayScore = p1Goals;
+  // Enforce strict time-based categorization to prevent stale feed statuses
+  if (nowMs >= startMs + 105 * 60 * 1000) {
+    status = 'finished';
+    minute = 90;
+    if (scores && scores.length > 0) {
+      const latest = scores[scores.length - 1];
+      const p1Goals = latest.Stats?.[1] ?? 0;
+      const p2Goals = latest.Stats?.[2] ?? 0;
+      if (f.Participant1IsHome) {
+        homeScore = p1Goals;
+        awayScore = p2Goals;
+      } else {
+        homeScore = p2Goals;
+        awayScore = p1Goals;
+      }
     }
+  } else if (nowMs >= startMs) {
+    status = 'live';
+    if (scores && scores.length > 0) {
+      const latest = scores[scores.length - 1];
+      minute = latest.Minute;
+      const p1Goals = latest.Stats?.[1] ?? 0;
+      const p2Goals = latest.Stats?.[2] ?? 0;
+      if (f.Participant1IsHome) {
+        homeScore = p1Goals;
+        awayScore = p2Goals;
+      } else {
+        homeScore = p2Goals;
+        awayScore = p1Goals;
+      }
+    } else {
+      minute = Math.min(90, Math.floor((nowMs - startMs) / 60000));
+    }
+  } else {
+    status = 'upcoming';
+    minute = 0;
   }
 
   return {
@@ -83,6 +113,7 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
     minute,
     status,
     startTime: f.StartTime,
+    competition: f.Competition || 'FIFA World Cup 2026'
   };
 }
 

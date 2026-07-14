@@ -11,7 +11,7 @@ import { useTxOddsAuth } from '../hooks/useTxOddsAuth';
 import SplashScreen from '../screens/SplashScreen';
 import LandingScreen from '../screens/LandingScreen';
 import ActivatingScreen from '../screens/ActivatingScreen';
-import MatchFeedScreen from '../screens/MatchFeedScreen';
+import HomeScreen from '../screens/HomeScreen';
 import MatchDetailsScreen from '../screens/MatchDetailsScreen';
 import WalletScreen from '../screens/WalletScreen';
 
@@ -37,7 +37,7 @@ function HomeTabs() {
     >
       <Tab.Screen
         name="Matches"
-        component={MatchFeedScreen}
+        component={HomeScreen}
         options={{
           tabBarLabel: 'Matches',
           tabBarIcon: ({ color, size }) => (

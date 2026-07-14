@@ -40,6 +40,7 @@ export interface Match {
   minute: number;
   status: 'upcoming' | 'live' | 'finished';
   startTime: string;
+  competition?: string;
 }
 
 // Prediction Types
