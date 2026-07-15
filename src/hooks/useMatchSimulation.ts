@@ -21,8 +21,8 @@ export interface OptionPosition {
 export function useMatchSimulation(
   match: Match | null,
   triggerConfetti: () => void,
-  demoBalance: number,
-  setDemoBalance: React.Dispatch<React.SetStateAction<number>>,
+  walletBalance: number,
+  setWalletBalance: React.Dispatch<React.SetStateAction<number>>,
   positions: OptionPosition[],
   setPositions: React.Dispatch<React.SetStateAction<OptionPosition[]>>
 ) {
@@ -150,7 +150,7 @@ export function useMatchSimulation(
                 const won = pos.direction === 'hi' ? actualVal > pos.strikeLevel : actualVal < pos.strikeLevel;
                 if (won) {
                   const winnings = pos.stake * pos.payout;
-                  setDemoBalance((b) => b + winnings);
+                  setWalletBalance((b) => b + winnings);
                   triggerConfetti();
                 }
                 return { ...pos, status: won ? 'won' : 'lost' };
@@ -240,7 +240,7 @@ export function useMatchSimulation(
   // Execute trade
   const executeTrade = useCallback(() => {
     if (!selection || !match) return;
-    if (demoBalance < stake) {
+    if (walletBalance < stake) {
       alert('Insufficient Balance');
       return;
     }
@@ -260,14 +260,14 @@ export function useMatchSimulation(
       status: 'pending'
     };
 
-    setDemoBalance((b) => parseFloat((b - stake).toFixed(2)));
+    setWalletBalance((b) => parseFloat((b - stake).toFixed(2)));
     setPositions((prev) => [newPosition, ...prev]);
     setSelection(null);
-  }, [selection, match, demoBalance, stake, tradeDirection, odds, asset, currentValue, simState.minute]);
+  }, [selection, match, walletBalance, stake, tradeDirection, odds, asset, currentValue, simState.minute]);
 
   const cashOut = useCallback((pos: OptionPosition) => {
     const cashValue = getCashOutAmount(pos);
-    setDemoBalance((b) => parseFloat((b + cashValue).toFixed(2)));
+    setWalletBalance((b) => parseFloat((b + cashValue).toFixed(2)));
     setPositions((prev) =>
       prev.map((p) => (p.id === pos.id ? { ...p, status: 'cashed_out', cashOutAmount: cashValue } : p))
     );
@@ -277,7 +277,7 @@ export function useMatchSimulation(
     simState,
     isRunning,
     setIsRunning,
-    demoBalance,
+    walletBalance,
     positions,
     asset,
     setAsset,

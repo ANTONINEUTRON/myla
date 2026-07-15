@@ -14,8 +14,8 @@ interface InteractiveMatchCardProps {
   match: Match;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  demoBalance: number;
-  setDemoBalance: React.Dispatch<React.SetStateAction<number>>;
+  walletBalance: number;
+  setWalletBalance: React.Dispatch<React.SetStateAction<number>>;
   positions: OptionPosition[];
   setPositions: React.Dispatch<React.SetStateAction<OptionPosition[]>>;
   triggerConfetti: () => void;
@@ -26,8 +26,8 @@ export default function InteractiveMatchCard({
   match,
   isExpanded,
   onToggleExpand,
-  demoBalance,
-  setDemoBalance,
+  walletBalance,
+  setWalletBalance,
   positions,
   setPositions,
   triggerConfetti,
@@ -37,8 +37,6 @@ export default function InteractiveMatchCard({
   // Call simulation hook inside card context
   const {
     simState,
-    isRunning,
-    setIsRunning,
     asset,
     setAsset,
     stake,
@@ -55,13 +53,12 @@ export default function InteractiveMatchCard({
     currentValue,
     executeTrade,
     cashOut,
-    getCashOutAmount,
-    resetSimulation
+    getCashOutAmount
   } = useMatchSimulation(
     isExpanded ? match : null, // only simulate if expanded
     triggerConfetti,
-    demoBalance,
-    setDemoBalance,
+    walletBalance,
+    setWalletBalance,
     positions,
     setPositions
   );
@@ -74,25 +71,43 @@ export default function InteractiveMatchCard({
     return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, [match.startTime]);
 
+  const renderStatusBadge = (status: Match['status'], minute?: number) => {
+    switch (status) {
+      case 'live':
+        return (
+          <View style={styles.badgeContainer}>
+            <View style={[styles.badgeDot, { backgroundColor: '#E53935' }]} />
+            <Text style={[styles.badgeTxt, { color: '#E53935' }]}>LIVE Min {minute?.toString()}'</Text>
+          </View>
+        );
+      case 'upcoming':
+        return (
+          <View style={styles.badgeContainer}>
+            <Ionicons name="calendar-outline" size={12} color="#FF6B35" />
+            <Text style={[styles.badgeTxt, { color: '#FF6B35' }]}>UPCOMING</Text>
+          </View>
+        );
+      case 'finished':
+        return (
+          <View style={styles.badgeContainer}>
+            <Ionicons name="checkmark-circle-outline" size={12} color="#8E8E93" />
+            <Text style={[styles.badgeTxt, { color: '#8E8E93' }]}>FINISHED</Text>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <View style={[styles.matchCard, isExpanded && styles.expandedCard]}>
       {/* Card Header toggle */}
       <TouchableOpacity style={styles.cardHeader} onPress={onToggleExpand}>
         <View style={styles.matchMeta}>
           <View>
-            <Text style={styles.matchStatus}>
-              {isExpanded
-                ? (simState.status === 'live'
-                    ? `🔴 LIVE Min ${simState.minute}'`
-                    : simState.status === 'upcoming'
-                      ? '⚽ UPCOMING'
-                      : '⚽ FINISHED')
-                : (match.status === 'live'
-                    ? `🔴 LIVE Min ${match.minute}'`
-                    : match.status === 'upcoming'
-                      ? '⚽ UPCOMING'
-                      : '⚽ FINISHED')}
-            </Text>
+            {isExpanded
+              ? renderStatusBadge(simState.status, simState.minute)
+              : renderStatusBadge(match.status, match.minute)}
             <Text style={styles.matchDate}>{formattedDate}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -126,44 +141,44 @@ export default function InteractiveMatchCard({
         </View>
 
         {!isExpanded && (
-          <Text style={styles.expandHint}>Tap to open interactive options chart ↓</Text>
+          <Text style={styles.expandHint}>Tap to open </Text>
         )}
       </TouchableOpacity>
 
       {/* Expanded terminal panel */}
       {isExpanded && (
         <View style={styles.terminalContainer}>
-          {/* Game Controls */}
-          <View style={styles.simRow}>
-            <TouchableOpacity style={styles.simBtn} onPress={() => setIsRunning(!isRunning)}>
-              <Text style={styles.simBtnTxt}>{isRunning ? '⏸ Pause Game' : '▶ Resume Game'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.simBtn} onPress={resetSimulation}>
-              <Text style={styles.simBtnTxt}>🔄 Reset Sim</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Asset toggle bar */}
           <View style={styles.assetTabs}>
-            {(['corners', 'goals', 'cards'] as OptionAsset[]).map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.assetTab, asset === tab && styles.assetTabActive]}
-                onPress={() => {
-                  setAsset(tab);
-                  setSelection(null);
-                }}
-              >
-                <Text style={[styles.assetLabel, asset === tab && styles.assetLabelActive]}>
-                  {tab === 'corners' ? '🚩 Corners' : tab === 'goals' ? '⚽ Goals' : '🎴 Cards'}:{' '}
-                  {tab === 'goals'
-                    ? simState.homeScore + simState.awayScore
-                    : tab === 'corners'
-                    ? simState.corners
-                    : simState.cards}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {(['corners', 'goals', 'cards'] as OptionAsset[]).map((tab) => {
+              const isActive = asset === tab;
+              const iconColor = isActive ? THEME.colors.primary.DEFAULT : '#8E8E93';
+              let iconName: any = 'football-outline';
+              if (tab === 'corners') iconName = 'flag-outline';
+              else if (tab === 'cards') iconName = 'square-outline';
+
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.assetTab, isActive && styles.assetTabActive, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
+                  onPress={() => {
+                    setAsset(tab);
+                    setSelection(null);
+                  }}
+                >
+                  <Ionicons name={iconName} size={13} color={iconColor} />
+                  <Text style={[styles.assetLabel, isActive && styles.assetLabelActive]}>
+                    {tab === 'corners' ? 'Corners' : tab === 'goals' ? 'Goals' : 'Cards'}:{' '}
+                    {tab === 'goals'
+                      ? simState.homeScore + simState.awayScore
+                      : tab === 'corners'
+                      ? simState.corners
+                      : simState.cards}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Dynamic SVG Line Chart */}
@@ -252,5 +267,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 2,
     fontWeight: '500'
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  badgeTxt: {
+    fontSize: 11,
+    fontWeight: '700'
   }
 });

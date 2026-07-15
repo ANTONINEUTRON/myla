@@ -63,7 +63,10 @@ export default function WalletScreen() {
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statValue}>0</Text>
-          <Text style={styles.statLabel}>Streak 🔥</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="flame" size={13} color="#FF6B35" />
+            <Text style={styles.statLabel}>Streak</Text>
+          </View>
         </View>
       </View>
     </View>

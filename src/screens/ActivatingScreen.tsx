@@ -5,8 +5,8 @@
  * Runs the TxODDS free-tier subscribe + activate flow automatically.
  *
  * UX:
- *  - Short description + ℹ️ button (opens detail modal)
- *  - 3 animated steps (spinner → checkmark as each completes)
+ *  - Short description + info button (opens detail modal)
+ *  - 3 animated steps (spinner -> checkmark as each completes)
  *  - "Skip for now" skips activation and uses seed data
  *  - Auto-proceeds to feed on success
  */
@@ -284,7 +284,7 @@ export default function ActivatingScreen({
         {/* Title */}
         <Text style={styles.title}>Setting Up{'\n'}Live Data</Text>
 
-        {/* ── Short description + ℹ️ button ── */}
+        {/* ── Short description + info button ── */}
         <View style={styles.descriptionRow}>
           <Text style={styles.description}>
             One-time free World Cup access

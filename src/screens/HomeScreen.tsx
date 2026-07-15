@@ -20,25 +20,31 @@ import { OptionPosition } from '../hooks/useMatchSimulation';
 import { txoddsService } from '../services/txodds';
 import InteractiveMatchCard from '../components/InteractiveMatchCard';
 import ConfettiCelebration, { ConfettiParticle } from '../components/ConfettiCelebration';
+import { useWallet } from '../hooks/useWallet';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { matches, loading, error, refreshMatches } = useMatchFeed();
+  const { balance } = useWallet();
 
   // Expansions coordinate in feed
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
 
-  // Global shared demo SOL wallet state
-  const [demoBalance, setDemoBalance] = useState<number>(10.0);
+  // Global shared SOL wallet state (initialized and synced from actual wallet balance)
+  const [walletBalance, setWalletBalance] = useState<number>(balance);
   const [positions, setPositions] = useState<OptionPosition[]>([]);
+
+  useEffect(() => {
+    setWalletBalance(balance);
+  }, [balance]);
 
   // Confetti particles list state
   const [confetti, setConfetti] = useState<ConfettiParticle[]>([]);
 
   // ─── Dropdown Filter States ──────────────────────────────────────
   const [selectedCompetition, setSelectedCompetition] = useState<string>('All Competitions');
-  const [statusFilter, setStatusFilter] = useState<'upcoming' | 'finished' | 'all'>('upcoming');
+  const [statusFilter, setStatusFilter] = useState<'live' | 'upcoming' | 'finished' | 'all'>('all');
 
   const [compDropdownOpen, setCompDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -63,7 +69,9 @@ export default function HomeScreen() {
       const compMatches = selectedCompetition === 'All Competitions' || m.competition === selectedCompetition;
       
       let statusMatches = true;
-      if (statusFilter === 'upcoming') {
+      if (statusFilter === 'live') {
+        statusMatches = m.status === 'live';
+      } else if (statusFilter === 'upcoming') {
         statusMatches = m.status === 'upcoming';
       } else if (statusFilter === 'finished') {
         statusMatches = m.status === 'finished';
@@ -133,18 +141,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Helper flags emoji mapping
-  const getFlag = (team: string): string => {
-    const flags: Record<string, string> = {
-      Brazil: '🇧🇷',
-      Croatia: '🇭🇷',
-      France: '🇫🇷',
-      Senegal: '🇸🇳',
-      Argentina: '🇦🇷',
-      Japan: '🇯🇵',
-    };
-    return flags[team] || '🏳️';
-  };
 
   // ─── Render Stats Progress Bar Row ──────────────────────────────
   const renderStatRow = (label: string, homeVal: number, awayVal: number) => {
@@ -212,8 +208,8 @@ export default function HomeScreen() {
         match={item}
         isExpanded={isExpanded}
         onToggleExpand={() => setExpandedMatchId(isExpanded ? null : item.id)}
-        demoBalance={demoBalance}
-        setDemoBalance={setDemoBalance}
+        walletBalance={walletBalance}
+        setWalletBalance={setWalletBalance}
         positions={positions}
         setPositions={setPositions}
         triggerConfetti={triggerConfetti}
@@ -233,7 +229,7 @@ export default function HomeScreen() {
     }
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📭</Text>
+        <Ionicons name="folder-open-outline" size={48} color="#8E8E93" style={{ marginBottom: 16 }} />
         <Text style={styles.emptyTitle}>No Matches Found</Text>
         <Text style={styles.emptySubtitle}>
           {error 
@@ -258,7 +254,7 @@ export default function HomeScreen() {
           <Text style={styles.subtitle}>Sports Binary Options Terminal</Text>
         </View>
         <View style={styles.balancePill}>
-          <Text style={styles.balanceText}>{demoBalance.toFixed(2)} Demo SOL</Text>
+          <Text style={styles.balanceText}>{walletBalance.toFixed(3)} SOL</Text>
         </View>
       </View>
 
@@ -312,7 +308,7 @@ export default function HomeScreen() {
 
           {statusDropdownOpen && (
             <View style={styles.dropdownMenuRight}>
-              {(['upcoming', 'finished', 'all'] as const).map((s) => (
+              {(['live', 'upcoming', 'finished', 'all'] as const).map((s) => (
                 <TouchableOpacity
                   key={s}
                   style={styles.dropdownItem}
@@ -372,22 +368,25 @@ export default function HomeScreen() {
                 {/* Scoreboard display header */}
                 <View style={styles.modalScoreboard}>
                   <View style={styles.modalTeam}>
-                    <Text style={styles.modalFlag}>{getFlag(selectedStatsMatch.homeTeam)}</Text>
+                    <Ionicons name="shirt-outline" size={28} color="#FF6B35" style={{ marginBottom: 4 }} />
                     <Text style={styles.modalTeamName} numberOfLines={1}>{selectedStatsMatch.homeTeam}</Text>
                   </View>
                   <Text style={styles.modalScore}>
                     {selectedStatsSim ? selectedStatsSim.homeScore : selectedStatsMatch.homeScore} - {selectedStatsSim ? selectedStatsSim.awayScore : selectedStatsMatch.awayScore}
                   </Text>
                   <View style={styles.modalTeam}>
-                    <Text style={styles.modalFlag}>{getFlag(selectedStatsMatch.awayTeam)}</Text>
+                    <Ionicons name="shirt-outline" size={28} color="#38BDF8" style={{ marginBottom: 4 }} />
                     <Text style={styles.modalTeamName} numberOfLines={1}>{selectedStatsMatch.awayTeam}</Text>
                   </View>
                 </View>
 
                 {selectedStatsSim && (
-                  <Text style={styles.modalLiveLabel}>
-                    🔴 Simulated Minute: {selectedStatsSim.minute}'
-                  </Text>
+                  <View style={styles.simulatedLabelWrapper}>
+                    <View style={styles.simulatedLiveDot} />
+                    <Text style={styles.simulatedLabelTxt}>
+                      Simulated Minute: {selectedStatsSim.minute}'
+                    </Text>
+                  </View>
                 )}
 
                 {statsLoading ? (
@@ -667,5 +666,24 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
     lineHeight: 18
+  },
+  simulatedLabelWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+    gap: 6
+  },
+  simulatedLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF6B35'
+  },
+  simulatedLabelTxt: {
+    color: '#FF6B35',
+    fontSize: 11,
+    fontWeight: '700'
   }
 });

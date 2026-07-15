@@ -18,8 +18,6 @@ import {
 } from '../types/txodds';
 import { Match, Market, MarketType } from '../types';
 
-// ─── Configuration ───────────────────────────────────────────────
-
 /** Base origin (no /api suffix — paths include /api/... themselves) */
 const ORIGIN_MAINNET = 'https://txline.txodds.com';
 const ORIGIN_DEVNET = 'https://txline-dev.txodds.com';
@@ -86,7 +84,15 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
     status = 'live';
     if (scores && scores.length > 0) {
       const latest = scores[scores.length - 1];
-      minute = latest.Minute;
+      
+      if (latest.Minute !== undefined && latest.Minute !== null) {
+        minute = latest.Minute;
+      } else if (latest.Clock?.Seconds !== undefined && latest.Clock?.Seconds !== null) {
+        minute = Math.floor(latest.Clock.Seconds / 60);
+      } else {
+        minute = Math.min(90, Math.floor((nowMs - startMs) / 60000));
+      }
+
       const p1Goals = latest.Stats?.[1] ?? 0;
       const p2Goals = latest.Stats?.[2] ?? 0;
       if (f.Participant1IsHome) {

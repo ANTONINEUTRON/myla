@@ -23,6 +23,7 @@ import Svg, {
 import { THEME } from '../theme';
 import { useMatchFeed } from '../hooks/useMatchFeed';
 import { Match } from '../types';
+import { useWallet } from '../hooks/useWallet';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_HEIGHT = 220;
@@ -60,10 +61,15 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
   const feedMatch = matches.find((m) => m.id === matchId);
   
   // ─── Local State ──────────────────────────────────────────────────
+  const { balance } = useWallet();
   const [asset, setAsset] = useState<OptionAsset>('corners');
-  const [demoBalance, setDemoBalance] = useState<number>(10.0);
+  const [walletBalance, setWalletBalance] = useState<number>(balance);
   const [stake, setStake] = useState<number>(0.1);
   const [positions, setPositions] = useState<OptionPosition[]>([]);
+
+  useEffect(() => {
+    setWalletBalance(balance);
+  }, [balance]);
   
   // Match simulator states
   const [isRunning, setIsRunning] = useState<boolean>(true);
@@ -207,7 +213,7 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
 
                 if (won) {
                   const winnings = pos.stake * pos.payout;
-                  setDemoBalance((b) => b + winnings);
+                  setWalletBalance((b) => b + winnings);
                   triggerConfetti();
                 }
 
@@ -364,8 +370,8 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
   // ─── Confirm & Place Simulated Trade ──────────────────────────────
   const handleExecuteTrade = () => {
     if (!selection) return;
-    if (demoBalance < stake) {
-      Alert.alert('Insufficient Balance', 'You need more demo SOL to open this position.');
+    if (walletBalance < stake) {
+      Alert.alert('Insufficient Balance', 'You need more SOL to open this position.');
       return;
     }
 
@@ -383,7 +389,7 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
       status: 'pending'
     };
 
-    setDemoBalance((b) => parseFloat((b - stake).toFixed(2)));
+    setWalletBalance((b) => parseFloat((b - stake).toFixed(2)));
     setPositions((prev) => [newPosition, ...prev]);
     
     // Reset selection after trade
@@ -394,7 +400,7 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
   // ─── Trigger Cash Out early ────────────────────────────────────────
   const handleCashOut = (pos: OptionPosition) => {
     const cashOutVal = getCashOutAmount(pos);
-    setDemoBalance((b) => parseFloat((b + cashOutVal).toFixed(2)));
+    setWalletBalance((b) => parseFloat((b + cashOutVal).toFixed(2)));
     setPositions((prev) =>
       prev.map((p) => (p.id === pos.id ? { ...p, status: 'cashed_out', cashOutAmount: cashOutVal } : p))
     );
@@ -473,7 +479,7 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
           <Text style={styles.backTxt}>← Matches</Text>
         </TouchableOpacity>
         <View style={styles.balancePill}>
-          <Text style={styles.balanceText}>{demoBalance.toFixed(2)} Demo SOL</Text>
+          <Text style={styles.balanceText}>{walletBalance.toFixed(2)} SOL</Text>
         </View>
       </View>
 
@@ -489,15 +495,6 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
           </View>
           <View style={styles.simControls}>
             <Text style={styles.timeText}>Min {matchState.minute}'</Text>
-            <TouchableOpacity
-              style={styles.controlPill}
-              onPress={() => setIsRunning(!isRunning)}
-            >
-              <Text style={styles.controlLabel}>{isRunning ? '⏸ Pause' : '▶ Play'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.controlPill} onPress={handleResetSimulation}>
-              <Text style={styles.controlLabel}>🔄 Reset</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -667,7 +664,7 @@ export default function MatchDetailsScreen({ route, navigation }: any) {
                 );
               })()}
 
-              {/* Interactive Target crosshair [🎯] */}
+              {/* Interactive Target crosshair */}
               {selection && (() => {
                 const x = CHART_PADDING.left + (selection.strikeMinute / 90) * plotWidth;
                 const y =

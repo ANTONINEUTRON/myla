@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../theme';
 
 interface TradeTicketProps {
@@ -47,7 +48,10 @@ export default function TradeTicket({
           style={[styles.choiceBtn, styles.hiBtn, tradeDirection === 'hi' && styles.choiceBtnActiveHI]}
           onPress={() => setTradeDirection('hi')}
         >
-          <Text style={styles.choiceLabel}>🟢 HI (&gt; {selection.strikeLevel})</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <Ionicons name="arrow-up-circle" size={16} color="#00E676" />
+            <Text style={styles.choiceLabel}>HI (&gt; {selection.strikeLevel})</Text>
+          </View>
           <Text style={styles.oddsText}>{odds.hi}x Return</Text>
         </TouchableOpacity>
 
@@ -55,7 +59,10 @@ export default function TradeTicket({
           style={[styles.choiceBtn, styles.loBtn, tradeDirection === 'lo' && styles.choiceBtnActiveLO]}
           onPress={() => setTradeDirection('lo')}
         >
-          <Text style={styles.choiceLabel}>🔴 LO (&lt; {selection.strikeLevel})</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <Ionicons name="arrow-down-circle" size={16} color="#FF6B35" />
+            <Text style={styles.choiceLabel}>LO (&lt; {selection.strikeLevel})</Text>
+          </View>
           <Text style={styles.oddsText}>{odds.lo}x Return</Text>
         </TouchableOpacity>
       </View>

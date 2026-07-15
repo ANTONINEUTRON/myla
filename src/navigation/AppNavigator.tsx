@@ -12,7 +12,6 @@ import SplashScreen from '../screens/SplashScreen';
 import LandingScreen from '../screens/LandingScreen';
 import ActivatingScreen from '../screens/ActivatingScreen';
 import HomeScreen from '../screens/HomeScreen';
-import MatchDetailsScreen from '../screens/MatchDetailsScreen';
 import WalletScreen from '../screens/WalletScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -102,7 +101,6 @@ function MainContent() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={HomeTabs} />
-        <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

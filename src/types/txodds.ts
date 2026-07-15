@@ -26,7 +26,11 @@ export interface TxOddsEntry {
 export interface TxScoreEntry {
   FixtureId: number;
   GamePhase: TxGamePhase;
-  Minute: number;
+  Minute?: number;
+  Clock?: {
+    Running: boolean;
+    Seconds: number;
+  };
   Stats: Record<string, number>; // keys: 1=P1 goals, 2=P2 goals, etc.
   Timestamp: string;
 }
