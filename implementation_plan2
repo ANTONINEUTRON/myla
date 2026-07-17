@@ -1,0 +1,264 @@
+# Implementation Plan — Shared Pool Solana Program + Oracle Backend
+
+## Goal
+
+Replace the DuelDuck 1v1 duel model with a **custom parimutuel shared-pool prediction system** built on Solana. Users predict Over/Under on a specific stat (corners, goals, cards) at a specific minute. All stakes go into a shared on-chain pool. When the strike minute arrives, a backend oracle reads TxODDS live data and resolves the pool. Winners split the pot proportionally.
+
+---
+
+## Architecture Overview
+
+```
+┌──────────────────────┐     ┌─────────────────────┐     ┌──────────────┐
+│   Mobile App (RN)    │────▶│  Solana Blockchain   │◀────│ Oracle (Node)│
+│                      │     │                      │     │              │
+│ • Browse matches     │     │ ┌──────────────────┐ │     │ • Poll pools │
+│ • Pick strike target │     │ │  MYLA Pool       │ │     │ • Read TxODDS│
+│ • Stake SOL (Over/   │     │ │  Program (Anchor)│ │     │ • Call       │
+│   Under)             │     │ │                  │ │     │   resolve()  │
+│ • Claim winnings     │     │ │ • create_pool    │ │     │              │
+│                      │     │ │ • place_bet      │ │     └──────────────┘
+│                      │     │ │ • resolve_pool   │ │
+│                      │     │ │ • claim_winnings │ │
+│                      │     │ │ • refund         │ │
+│                      │     │ └──────────────────┘ │
+└──────────────────────┘     └─────────────────────┘
+```
+
+---
+
+## Part 1: Solana Program (Anchor)
+
+### Account Structure
+
+#### Pool Account (PDA)
+Each unique prediction target `(matchId, asset, strikeLevel, strikeMinute)` gets **exactly one pool**.
+
+**PDA Seeds:** `["pool", matchId, asset, strikeLevel, strikeMinute]`
+
+```
+Pool {
+  match_id: String,          // TxODDS fixture ID
+  asset: String,             // "corners" | "goals" | "cards"
+  strike_level: u16,         // e.g., 65 = 6.5 (scaled ×10 to avoid floats)
+  strike_minute: u8,         // e.g., 45
+  deadline: i64,             // Unix timestamp after which no more bets allowed
+  
+  over_total: u64,           // Total lamports staked on Over
+  under_total: u64,          // Total lamports staked on Under
+  over_count: u32,           // Number of Over bettors
+  under_count: u32,          // Number of Under bettors
+  
+  resolved: bool,            // Has the oracle resolved this pool?
+  winning_side: Option<u8>,  // 0 = Over won, 1 = Under won, None = unresolved
+  actual_value: Option<u16>, // The real stat value at strike minute (scaled ×10)
+  
+  commission_rate: u16,      // e.g., 500 = 5.00% (basis points)
+  commission_wallet: Pubkey, // MYLA treasury wallet
+  oracle: Pubkey,            // Authorized oracle keypair
+  bump: u8,                  // PDA bump
+}
+```
+
+#### Bet Account (PDA)
+One per user per pool. Tracks their individual stake and side.
+
+**PDA Seeds:** `["bet", pool_pda, user_pubkey]`
+
+```
+Bet {
+  pool: Pubkey,              // The pool this bet belongs to
+  user: Pubkey,              // The bettor's wallet
+  side: u8,                  // 0 = Over, 1 = Under
+  amount: u64,               // Lamports staked
+  claimed: bool,             // Has the user claimed their winnings?
+  bump: u8,
+}
+```
+
+### Instructions
+
+#### 1. `create_pool`
+- **Called by:** First user to predict on a unique (matchId, asset, strikeLevel, strikeMinute) combo.
+- **Action:** Initializes the Pool PDA account. Sets the oracle pubkey, commission rate, and deadline.
+- **Constraint:** Deadline must be in the future.
+
+#### 2. `place_bet`
+- **Called by:** Any user.
+- **Action:** 
+  - Creates a Bet PDA for the user (or errors if they already bet on this pool).
+  - Transfers SOL from the user's wallet into the Pool's vault (PDA-owned lamports).
+  - Increments `over_total`/`under_total` and `over_count`/`under_count`.
+- **Constraints:**
+  - Pool must not be resolved.
+  - Current time must be before the deadline.
+  - Minimum stake: 0.01 SOL.
+  - If pool doesn't exist yet, `create_pool` + `place_bet` happen atomically.
+
+#### 3. `resolve_pool`
+- **Called by:** Oracle keypair only.
+- **Action:**
+  - Sets `winning_side` based on the `actual_value` vs `strike_level`.
+  - Transfers commission to the treasury wallet.
+  - Marks pool as `resolved = true`.
+- **Constraints:**
+  - `signer == pool.oracle`.
+  - Pool must not already be resolved.
+  - Current time must be past the deadline.
+
+#### 4. `claim_winnings`
+- **Called by:** Any user with a winning Bet.
+- **Action:**
+  - Calculates: `payout = (user_stake / winning_side_total) × (total_pool - commission)`.
+  - Transfers payout from the pool vault to the user's wallet.
+  - Marks `bet.claimed = true`.
+- **Constraints:**
+  - Pool must be resolved.
+  - User's bet side must equal the winning side.
+  - User must not have already claimed.
+
+#### 5. `refund`
+- **Called by:** Any user with a Bet, OR the oracle.
+- **Action:** Returns the user's full stake if:
+  - The pool is one-sided (only Over bets or only Under bets exist) and the deadline has passed.
+  - The pool was not resolved within a grace period (e.g., 24 hours after deadline).
+
+### Payout Math Example
+
+| | Over | Under |
+|---|---|---|
+| Player A | 0.5 SOL | |
+| Player B | 0.3 SOL | |
+| Player C | | 0.2 SOL |
+| Player D | | 0.4 SOL |
+| Player E | 0.2 SOL | |
+| **Side Total** | **1.0 SOL** | **0.6 SOL** |
+
+**Total Pool:** 1.6 SOL  
+**Commission (5%):** 0.08 SOL  
+**Distributable:** 1.52 SOL
+
+**If Over wins:**
+- Player A gets: `(0.5 / 1.0) × 1.52 = 0.76 SOL` (staked 0.5, profit +0.26)
+- Player B gets: `(0.3 / 1.0) × 1.52 = 0.456 SOL`
+- Player E gets: `(0.2 / 1.0) × 1.52 = 0.304 SOL`
+
+---
+
+## Part 2: Oracle Backend Script
+
+Location: `backend/src/oracle.ts`
+
+### What It Does
+
+A lightweight Node.js script that runs on a 30-second interval:
+
+1. **Fetch active pools** — Query the Solana program for all Pool accounts where `resolved == false` and `deadline < now`.
+2. **Read TxODDS data** — For each expired pool, call `txoddsService.getScores(matchId)` to get the actual stat value at the strike minute.
+3. **Resolve** — Call the `resolve_pool` instruction with the oracle keypair and the actual value.
+4. **Log** — Record every resolution with timestamp, pool address, and result.
+
+### Deployment Options
+
+| Option | Cost | Complexity |
+|---|---|---|
+| **Vercel Cron** (recommended) | Free tier | Lowest — single serverless function |
+| GitHub Actions scheduled workflow | Free | Low — YAML config + script |
+| VPS (e.g., Railway, Render) | ~$5/month | Medium — always-on process |
+
+### Files
+
+#### [NEW] `backend/src/oracle.ts`
+Main oracle loop: fetch unresolved pools → read TxODDS → resolve on-chain.
+
+#### [NEW] `backend/src/config.ts`
+Oracle keypair path, RPC endpoint, program ID, TxODDS credentials.
+
+#### [NEW] `backend/package.json`
+Dependencies: `@coral-xyz/anchor`, `@solana/web3.js`, `axios`, `dotenv`.
+
+---
+
+## Part 3: Mobile App Changes
+
+### Service Layer
+
+#### [DELETE] [duelduck.ts](file:///c:/Users/antoni/web_projects/myla/src/services/duelduck.ts)
+Remove DuelDuck service entirely. Replaced by direct Solana program interaction.
+
+#### [NEW] `src/services/pool-program.ts`
+Client-side wrapper for the Anchor program IDL. Methods:
+- `findPool(matchId, asset, strikeLevel, strikeMinute)` — Derive the pool PDA and fetch its state (or return null if it doesn't exist).
+- `placeBet(matchId, asset, strikeLevel, strikeMinute, side, amount)` — Atomically creates pool (if needed) + places bet. Prompts wallet signing via MWA.
+- `claimWinnings(poolAddress)` — Claims proportional payout for the connected wallet.
+- `getMyBets()` — Fetches all Bet PDAs owned by the connected wallet.
+
+### Hooks
+
+#### [MODIFY] [useMatchSimulation.ts](file:///c:/Users/antoni/web_projects/myla/src/hooks/useMatchSimulation.ts)
+- Replace `duelduckService` calls in `executeTrade` with `poolProgram.placeBet(...)`.
+- Add a `claimWinnings` method that calls `poolProgram.claimWinnings(...)`.
+- After resolution, poll the pool state to detect wins and trigger the confetti + balance update.
+
+### Components
+
+#### [MODIFY] [InteractiveMatchCard.tsx](file:///c:/Users/antoni/web_projects/myla/src/components/InteractiveMatchCard.tsx)
+- Display pool depth indicator: show how much SOL is staked on each side for the selected strike target (fetched from pool PDA state).
+- Add a "Claim" button on resolved winning positions.
+
+---
+
+## Part 4: Solana Program Files
+
+All files go in the existing `contracts/` directory.
+
+#### [NEW] `contracts/programs/myla-pool/src/lib.rs`
+Main Anchor program with all 5 instructions.
+
+#### [NEW] `contracts/programs/myla-pool/src/state.rs`
+Pool and Bet account structs.
+
+#### [NEW] `contracts/programs/myla-pool/src/errors.rs`
+Custom error codes (InsufficientStake, PoolAlreadyResolved, Unauthorized, etc.).
+
+#### [NEW] `contracts/programs/myla-pool/src/instructions/`
+One file per instruction: `create_pool.rs`, `place_bet.rs`, `resolve_pool.rs`, `claim_winnings.rs`, `refund.rs`.
+
+#### [NEW] `contracts/tests/myla-pool.ts`
+Anchor test suite: create pools, place bets on both sides, resolve, claim, verify balances.
+
+#### [NEW] `contracts/Anchor.toml`
+Anchor project config (cluster, program ID, wallet path).
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Commission wallet:** Which Solana wallet address should receive the 5% platform commission? This can be your existing project wallet (`5t2nMaoQyhpmoLTCc4dSq8M2Y3C8DE2X9N15mG7nGttW` from DuelDuck) or a separate treasury.
+
+> [!IMPORTANT]
+> **Devnet vs Mainnet:** Should we deploy to devnet first for testing during the hackathon, then mainnet later?
+
+> [!IMPORTANT]
+> **Minimum stake:** Is 0.01 SOL a good minimum, or do you want a different floor?
+
+---
+
+## Verification Plan
+
+### Automated Tests
+```bash
+# Build and test the Solana program
+cd contracts
+anchor build
+anchor test
+```
+
+### Manual Verification
+1. Deploy to devnet.
+2. From the mobile app, expand a live match → pick a strike target → stake on Over.
+3. From a second wallet (or dev wallet), stake on Under for the same target.
+4. Verify the pool PDA shows both sides funded.
+5. Run the oracle script → verify it resolves the pool correctly.
+6. From the winning wallet, tap Claim → verify SOL arrives.
