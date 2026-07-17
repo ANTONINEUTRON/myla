@@ -8,6 +8,7 @@ import React, {
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { Buffer } from 'buffer';
 
 const STORAGE_KEY_AUTH_TOKEN = 'myla_wallet_auth_token';
 
@@ -19,6 +20,8 @@ export interface WalletState {
   authToken: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
+  signMessage: (message: string) => Promise<string>;
+  signAndSendTransaction: (txBase64: string) => Promise<string>;
 }
 
 export const WalletContext = createContext<WalletState>({
@@ -29,6 +32,8 @@ export const WalletContext = createContext<WalletState>({
   authToken: null,
   connect: async () => {},
   disconnect: async () => {},
+  signMessage: async () => '',
+  signAndSendTransaction: async () => '',
 });
 
 /**
@@ -175,6 +180,89 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     ]);
   }, []);
 
+  const signMessage = useCallback(async (message: string): Promise<string> => {
+    if (!walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    if (walletAddress.startsWith('DevWallet')) {
+      // Dev mode: return a mock base64 signature
+      return Buffer.from(`mock-sig-${message}-${Date.now()}`).toString('base64');
+    }
+
+    if (Platform.OS === 'android') {
+      const { transact } = await import(
+        '@solana-mobile/mobile-wallet-adapter-protocol'
+      );
+
+      return await transact(async (wallet: any) => {
+        // Reauthorize to ensure the session is active
+        const auth = await wallet.reauthorize({
+          identity: {
+            name: 'MYLA',
+            uri: 'https://symbal.fun',
+            icon: 'favicon.ico',
+          },
+          auth_token: cachedAuthToken,
+        });
+
+        const addressBytes = Buffer.from(auth.accounts[0].address, 'base64');
+        const messageBytes = new Uint8Array(Buffer.from(message, 'utf-8'));
+
+        const result = await wallet.signMessages({
+          addresses: [addressBytes],
+          messages: [messageBytes],
+        });
+
+        return Buffer.from(result.signatures[0]).toString('base64');
+      });
+    }
+
+    throw new Error('Platform not supported for wallet message signing');
+  }, [walletAddress, cachedAuthToken]);
+
+  const signAndSendTransaction = useCallback(async (txBase64: string): Promise<string> => {
+    if (!walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    if (walletAddress.startsWith('DevWallet')) {
+      // Dev mode: simulate transaction send and return a mock signature hash
+      const mockHash = 'mocktx' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      return mockHash;
+    }
+
+    if (Platform.OS === 'android') {
+      const { transact } = await import(
+        '@solana-mobile/mobile-wallet-adapter-protocol'
+      );
+
+      return await transact(async (wallet: any) => {
+        // Reauthorize to ensure the session is active
+        const auth = await wallet.reauthorize({
+          identity: {
+            name: 'MYLA',
+            uri: 'https://symbal.fun',
+            icon: 'favicon.ico',
+          },
+          auth_token: cachedAuthToken,
+        });
+
+        const txBytes = new Uint8Array(Buffer.from(txBase64, 'base64'));
+
+        const result = await wallet.signAndSendTransactions({
+          transactions: [txBytes],
+        });
+
+        const sigBytes = result.signatures[0];
+        const bs58 = require('bs58');
+        return bs58.encode(sigBytes);
+      });
+    }
+
+    throw new Error('Platform not supported for wallet transactions');
+  }, [walletAddress, cachedAuthToken]);
+
   const value = useMemo(
     () => ({
       walletAddress,
@@ -184,8 +272,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       authToken: cachedAuthToken,
       connect,
       disconnect,
+      signMessage,
+      signAndSendTransaction,
     }),
-    [walletAddress, balance, isConnecting, cachedAuthToken, connect, disconnect]
+    [
+      walletAddress,
+      balance,
+      isConnecting,
+      cachedAuthToken,
+      connect,
+      disconnect,
+      signMessage,
+      signAndSendTransaction,
+    ]
   );
 
   return (

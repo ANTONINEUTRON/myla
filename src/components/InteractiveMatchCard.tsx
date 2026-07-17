@@ -132,9 +132,22 @@ export default function InteractiveMatchCard({
           <Text style={[styles.teamName, { textAlign: 'left' }]} numberOfLines={1}>
             {match.homeTeam}
           </Text>
-          <Text style={styles.score}>
-            {isExpanded ? simState.homeScore : match.homeScore} - {isExpanded ? simState.awayScore : match.awayScore}
-          </Text>
+          {(() => {
+            const status = isExpanded ? simState.status : match.status;
+            const hScore = isExpanded ? simState.homeScore : match.homeScore;
+            const aScore = isExpanded ? simState.awayScore : match.awayScore;
+            if (status === 'upcoming') {
+              return <Text style={styles.score}>VS</Text>;
+            }
+            return (
+              <View style={{ alignItems: 'center' }}>
+                <Text style={styles.score}>{hScore} - {aScore}</Text>
+                {status === 'finished' && (
+                  <Text style={styles.ftLabel}>FT</Text>
+                )}
+              </View>
+            );
+          })()}
           <Text style={[styles.teamName, { textAlign: 'right' }]} numberOfLines={1}>
             {match.awayTeam}
           </Text>
@@ -245,6 +258,7 @@ const styles = StyleSheet.create({
   },
   teamName: { color: THEME.colors.text.primary, fontSize: 15, fontWeight: '700', flex: 1 },
   score: { color: THEME.colors.text.primary, fontSize: 20, fontWeight: '800', marginHorizontal: 12 },
+  ftLabel: { color: THEME.colors.primary.DEFAULT, fontSize: 10, fontWeight: '800', letterSpacing: 1, marginTop: 2, backgroundColor: THEME.colors.primary.glow, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
   expandHint: { color: THEME.colors.text.muted, fontSize: 10, textAlign: 'center', marginTop: 12, fontWeight: '600' },
   terminalContainer: { marginTop: 16, borderTopWidth: 1, borderTopColor: THEME.colors.border, paddingTop: 16 },
   simRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 12 },

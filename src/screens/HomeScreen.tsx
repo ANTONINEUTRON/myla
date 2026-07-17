@@ -44,7 +44,7 @@ export default function HomeScreen() {
 
   // ─── Dropdown Filter States ──────────────────────────────────────
   const [selectedCompetition, setSelectedCompetition] = useState<string>('All Competitions');
-  const [statusFilter, setStatusFilter] = useState<'live' | 'upcoming' | 'finished' | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<'live' | 'upcoming' | 'all'>('upcoming');
 
   const [compDropdownOpen, setCompDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -73,10 +73,8 @@ export default function HomeScreen() {
         statusMatches = m.status === 'live';
       } else if (statusFilter === 'upcoming') {
         statusMatches = m.status === 'upcoming';
-      } else if (statusFilter === 'finished') {
-        statusMatches = m.status === 'finished';
       }
-      // 'all' includes live, upcoming, and finished
+      // 'all' includes all statuses (live, upcoming, finished)
       
       return compMatches && statusMatches;
     });
@@ -308,7 +306,7 @@ export default function HomeScreen() {
 
           {statusDropdownOpen && (
             <View style={styles.dropdownMenuRight}>
-              {(['live', 'upcoming', 'finished', 'all'] as const).map((s) => (
+              {(['live', 'upcoming', 'all'] as const).map((s) => (
                 <TouchableOpacity
                   key={s}
                   style={styles.dropdownItem}
