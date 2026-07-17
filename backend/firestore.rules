@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /pools/{pool} {
+      allow read: if true;
+      allow write: if false; // Only written by admin/cloud functions
+    }
+    match /bets/{bet} {
+      allow read: if true;
+      allow write: if false; // Only written by admin/cloud functions
+    }
+  }
+}

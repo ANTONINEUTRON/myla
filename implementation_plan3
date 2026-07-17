@@ -1,0 +1,95 @@
+# Implementation Plan — Phased Devnet & REST Backend Integration
+
+This plan maps out the step-by-step phases to wire the deployed Solana Devnet program (`9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf`) to the React Native app using standard REST calls, and connect the backend.
+
+---
+
+## Architecture Flow (REST-Based)
+
+```
+┌─────────────────────────────────┐           HTTP GET
+│        React Native App         │ ─────────────────────────────┐
+│                                 │                              │
+│ • Renders UI & Chart            │◄──────────────────────────┐  │
+│ • Fetches pool details via REST │     JSON Pool Details     │  │
+│ • Sends on-chain bets via MWA   │                           │  │
+└────────────────┬────────────────┘                           │  │
+                 │                                            │  │
+                 │ MWA signAndSend                            │  │
+                 ▼                                            │  │
+    ┌──────────────────────────┐                              │  │
+    │      Solana Devnet       │                              │  │
+    │  Program: 9AhsF4FX...    │                              │  │
+    └────────────▲─────────────┘                              │  │
+                 │                                            │  │
+                 │ resolve_pool (Oracle)                      │  │
+                 │                                            │  │
+    ┌────────────┴─────────────┐                              │  ▼
+    │     Firebase Oracle      │ ◄── Read/Write ──► ┌─────────┴──────────┐
+    │     Backend (Cron)       │                    │    Firestore Db    │
+    │                          │                    │                    │
+    │ • Reads TxODDS API       │                    │ • Stores Pools     │
+    │ • Resolves pools         │                    │ • Stores Bets      │
+    └──────────────────────────┘                    └────────────────────┘
+```
+
+---
+
+## Phase Breakdown
+
+### Phase 1: App Solana Client Service (`src/services/pool-program.ts`)
+Create a stateless Solana transaction builder service for the mobile app that uses the inline IDL of `myla_program` at `9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf`.
+
+- **Derivations:** Deterministic PDA derivations for Pool, Bet, and Vault accounts.
+- **Instruction Builders:** Functions to create transaction instructions for `create_pool` and `place_bet`.
+- **Atomic Transaction:** A utility that packs `create_pool` (if the pool is new) and `place_bet` into a single Solana transaction so the user only signs once.
+
+---
+
+### Phase 2: Wallet Context Upgrade (`src/context/WalletContext.tsx`)
+Transition the wallet context from mainnet placeholders to active Devnet operations.
+
+- **RPC Node:** Switch connections to `https://api.devnet.solana.com`.
+- **Chain Flag:** Change the MWA authorization requirement to `solana:devnet`.
+- **Address Decoder:** Fix the base64-to-base58 translation for public keys returned by the Mobile Wallet Adapter (MWA) to ensure valid Solana public keys are used during derivation.
+- **Connection Export:** Expose the devnet connection instance to external services.
+
+---
+
+### Phase 3: Firebase Functions REST API Extension
+Update the backend configurations and add a simple REST API endpoint for the app to read pool states.
+
+- **Program Config:** Update `index.ts` to reference `9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf` and change the IDL name to `myla_program`.
+- **`getPoolDetails` Endpoint:** Add an HTTP GET function that:
+  1. Accepts `matchId`, `asset`, `strikeLevel`, and `strikeMinute` as parameters.
+  2. Resolves the Pool PDA.
+  3. Checks Firestore for the cached pool status (to keep REST calls fast and cheap).
+  4. Returns a clean JSON body containing over/under counts, totals, calculated payouts, and status.
+
+---
+
+### Phase 4: Connect App Trade execution to Solana & REST
+Replace the simulator's mock trade process with real, functional network requests.
+
+- **Fetch Pool State:** Replace the hardcoded `DEMO_POOL` data in `TradeTicket.tsx` with a standard `fetch()` REST query to the new Firebase Function.
+- **Run Bets On-Chain:** Update `executeTrade` inside `useMatchSimulation.ts`:
+  1. Check if the pool exists.
+  2. If new, build an atomic transaction containing `create_pool` + `place_bet`.
+  3. Send the transaction payload to `WalletContext.signAndSendTransaction()`.
+  4. Display status alerts (Success/Failure) containing the Solana transaction signature.
+
+---
+
+### Phase 5: Verification & End-to-End Test
+Validate the entire integration.
+
+- **Verify Compilation:** Confirm all projects build with no TypeScript or Expo errors.
+- **Bet Execution:** Test picking a prediction line, triggering the MWA app, signing, and confirming transaction completion on Solana Explorer.
+- **Oracle Resolution:** Trigger the backend to verify it fetches TxODDS scores, submits the `resolve_pool` transaction, and updates Firestore statuses.
+
+---
+
+## Setup Constants
+Ensure these placeholders are set in the configuration:
+- **Oracle Public Key:** `BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS` (used for authorization checks during pool initialization)
+- **Commission Treasury:** `BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS` (used as the default protocol fee wallet)

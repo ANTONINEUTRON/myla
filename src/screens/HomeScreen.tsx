@@ -44,7 +44,7 @@ export default function HomeScreen() {
 
   // ─── Dropdown Filter States ──────────────────────────────────────
   const [selectedCompetition, setSelectedCompetition] = useState<string>('All Competitions');
-  const [statusFilter, setStatusFilter] = useState<'live' | 'upcoming' | 'all'>('upcoming');
+  const [statusFilter, setStatusFilter] = useState<'live' | 'upcoming' | 'all'>('all');
 
   const [compDropdownOpen, setCompDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
