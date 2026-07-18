@@ -87,8 +87,6 @@ function computeDiscriminator(instructionName: string): Uint8Array {
   throw new Error(`Unsupported instruction: ${instructionName}`);
 }
 
-// ── Main export ───────────────────────────────────────────────────
-
 /**
  * Perform the full TxODDS free-tier subscribe + activate flow.
  *
