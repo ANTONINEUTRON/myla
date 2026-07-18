@@ -31,11 +31,12 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { txoddsService } from './txodds';
+import { CONFIG } from '../config';
 
-// ── Mainnet config ────────────────────────────────────────────────
-const RPC_URL = 'https://api.mainnet-beta.solana.com';
-const PROGRAM_ID = new PublicKey('9ExbZjAapQww1vfcisDmrngPinHTEfpjYRWMunJgcKaA');
-const TXL_TOKEN_MINT = new PublicKey('Zhw9TVKp68a1QrftncMSd6ELXKDtpVMNuMGr1jNwdeL');
+// ── Devnet config ────────────────────────────────────────────────
+const RPC_URL = CONFIG.SOLANA_RPC_URL;
+const PROGRAM_ID = new PublicKey('6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J');
+const TXL_TOKEN_MINT = new PublicKey('4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG');
 const SERVICE_LEVEL_ID = 1;  // World Cup + Int Friendlies (60s delay, free)
 const DURATION_WEEKS = 4;    // Minimum subscription unit
 
@@ -217,13 +218,13 @@ export async function performFreeActivation(
         authResult = await wallet.authorize({
           auth_token: mwaAuthToken,
           identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
-          chain: 'solana:mainnet',
+          chain: 'solana:devnet',
         });
       } catch (authError) {
         console.warn('[Activation] Token authorization failed, attempting fresh authorization:', authError);
         authResult = await wallet.authorize({
           identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
-          chain: 'solana:mainnet',
+          chain: 'solana:devnet',
         });
 
         if (authResult?.auth_token) {
