@@ -52,6 +52,23 @@ function base64ToBase58(base64Address: string): string {
   }
 }
 
+function parseStoredAddress(address: string): string {
+  try {
+    new PublicKey(address);
+    return address;
+  } catch {
+    try {
+      const buffer = Buffer.from(address, 'base64');
+      if (buffer.length === 32) {
+        return new PublicKey(buffer).toBase58();
+      }
+    } catch (e) {
+      console.warn('Failed to parse legacy address as base64:', e);
+    }
+    return address;
+  }
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
@@ -80,9 +97,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const storedAddress = await AsyncStorage.getItem('myla_wallet_address');
         const storedToken = await AsyncStorage.getItem(STORAGE_KEY_AUTH_TOKEN);
         if (storedAddress && storedToken) {
-          setWalletAddress(storedAddress);
+          const parsedAddress = parseStoredAddress(storedAddress);
+          if (parsedAddress !== storedAddress) {
+            await AsyncStorage.setItem('myla_wallet_address', parsedAddress);
+          }
+          setWalletAddress(parsedAddress);
           setCachedAuthToken(storedToken);
-          fetchBalance(storedAddress);
+          fetchBalance(parsedAddress);
         }
       } catch {
         // Storage not available — that's fine, start disconnected

@@ -234,7 +234,7 @@ class TxODDSService {
    * Tries to load a cached JWT from AsyncStorage first,
    * then falls back to calling POST /auth/guest/start.
    */
-  async initGuestSession(useDevnet = false): Promise<boolean> {
+  async initGuestSession(useDevnet = true): Promise<boolean> {
     this.origin = useDevnet ? ORIGIN_DEVNET : ORIGIN_MAINNET;
 
     // Try cached JWT first
@@ -324,7 +324,7 @@ class TxODDSService {
    * Manually configure the service with existing credentials (e.g. from .env).
    * Useful during development when you already have a JWT + token.
    */
-  configure(jwt: string, apiToken: string, useDevnet = false) {
+  configure(jwt: string, apiToken: string, useDevnet = true) {
     this.origin = useDevnet ? ORIGIN_DEVNET : ORIGIN_MAINNET;
     this.jwt = jwt;
     this.apiToken = apiToken;

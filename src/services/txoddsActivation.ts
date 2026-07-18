@@ -29,7 +29,9 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
 } from '@solana/spl-token';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
+// @ts-ignore
+import bs58 from 'bs58';
 import { txoddsService } from './txodds';
 import { CONFIG } from '../config';
 
@@ -125,6 +127,23 @@ export async function performFreeActivation(
     const jwt = txoddsService.getJwt();
     if (!jwt) throw new Error('Could not obtain TxODDS guest JWT');
 
+    // Parse the wallet address to both base64 (MWA type) and base58 (standard Solana type) formats dynamically
+    let base64Address: string;
+    let base58Address: string;
+    try {
+      // If walletAddress is already base58, new PublicKey(walletAddress) succeeds
+      const pk = new PublicKey(walletAddress);
+      base58Address = walletAddress;
+      base64Address = Buffer.from(pk.toBytes()).toString('base64');
+    } catch {
+      // If it fails, walletAddress is base64
+      base64Address = walletAddress;
+      const pk = new PublicKey(Buffer.from(walletAddress, 'base64'));
+      base58Address = pk.toBase58();
+    }
+
+    console.log(`[Activation] Address resolved: Base58=${base58Address}, Base64=${base64Address}`);
+
     // ─── Step 2: Build the subscribe instruction ────────────────────
     onProgress('building_tx');
 
@@ -147,8 +166,7 @@ export async function performFreeActivation(
       PROGRAM_ID,
     );
 
-    // User public key (MWA gives base64 of the 32 raw bytes)
-    const userPublicKey = new PublicKey(Buffer.from(walletAddress, 'base64'));
+    const userPublicKey = new PublicKey(base58Address);
 
     // Token accounts (Token-2022)
     const userTokenAccount = getAssociatedTokenAddressSync(
@@ -208,10 +226,10 @@ export async function performFreeActivation(
     // Dynamic import so iOS/web don't crash on missing native module
     const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol');
 
-    const activationMessage = `${''/* txSig placeholder */}::${jwt}`;
-    let txSig: string;
-    let signatureBase64: string;
+    let txSig: string | null = null;
+    let signedTx: any = null;
 
+    // ─── Step 3a: Sign transaction in session 1 ──────────────────────
     await transact(async (wallet: any) => {
       let authResult;
       try {
@@ -234,23 +252,68 @@ export async function performFreeActivation(
         }
       }
 
-      // Sign the subscribe transaction
       const signResult = await wallet.signTransactions({
         payloads: [Buffer.from(serializedTx).toString('base64')],
       });
-      const signedTx = Transaction.from(Buffer.from(signResult.signed_payloads[0], 'base64'));
+      signedTx = Transaction.from(Buffer.from(signResult.signed_payloads[0], 'base64'));
 
-      // ─── Step 4: Confirm on chain ──────────────────────────────────
-      onProgress('confirming');
-      txSig = await connection.sendRawTransaction(signedTx.serialize());
-      await connection.confirmTransaction(txSig, 'confirmed');
-      console.log('[Activation] Subscribe tx confirmed:', txSig);
+      // Calculate transaction signature (base58) from the signed tx
+      const signatureBytes = signedTx.signature;
+      if (!signatureBytes) {
+        throw new Error('Transaction is missing signature');
+      }
+      txSig = bs58.encode(signatureBytes);
+      console.log('[Activation] Calculated transaction signature:', txSig);
+    });
 
-      // ─── Step 5: Sign activation message ──────────────────────────
-      onProgress('signing_message');
-      const msgBytes = Buffer.from(`${txSig}::${jwt}`, 'utf8');
+    if (!signedTx || !txSig) {
+      throw new Error('Failed to complete transaction signing session');
+    }
+
+    // Update progress step to transition UI to Step 3 (Activating live data feed)
+    onProgress('signing_message');
+
+    // Intermediate user interaction to avoid Android intent spam rejection.
+    // Includes a 800ms delay to let the app regain focus from the wallet before presenting the alert.
+    await new Promise<void>((resolve, reject) => {
+      setTimeout(() => {
+        Alert.alert(
+          'Verify Challenge',
+          'Transaction signed successfully. Please click Continue to sign the cryptographic verify challenge in your wallet to unlock live updates.',
+          [
+            { text: 'Continue', onPress: () => resolve() },
+            { text: 'Cancel', onPress: () => reject(new Error('User cancelled verification prompt')), style: 'cancel' }
+          ],
+          { cancelable: false }
+        );
+      }, 800);
+    });
+
+    let signatureBase64: string | null = null;
+
+    // ─── Step 3b: Sign activation message in session 2 ───────────────
+    await transact(async (wallet: any) => {
+      let authResult;
+      try {
+        const storedToken = await AsyncStorage.getItem('myla_wallet_auth_token');
+        authResult = await wallet.authorize({
+          auth_token: storedToken,
+          identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
+          chain: 'solana:devnet',
+        });
+      } catch (authError) {
+        authResult = await wallet.authorize({
+          identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
+          chain: 'solana:devnet',
+        });
+      }
+
+      // Format challenge message to sign as ${txSig}::${jwt} for empty leagues bundle
+      const messageString = `${txSig}::${jwt}`;
+      const msgBytes = Buffer.from(messageString, 'utf8');
+      
       const msgResult = await wallet.signMessages({
-        addresses: [walletAddress],
+        addresses: [base64Address],
         payloads: [msgBytes.toString('base64')],
       });
 
@@ -262,6 +325,23 @@ export async function performFreeActivation(
 
       signatureBase64 = Buffer.from(sigBytes).toString('base64');
     });
+
+    if (!signedTx || !txSig || !signatureBase64) {
+      throw new Error('Failed to complete signing session in wallet');
+    }
+
+    // ─── Step 4: Broadcast and Confirm on chain (outside MWA session) ───
+    onProgress('confirming');
+    console.log('[Activation] Broadcasting signed transaction to chain:', txSig);
+    const actualTxSig = await connection.sendRawTransaction(signedTx.serialize());
+    
+    if (actualTxSig !== txSig) {
+      console.warn(`[Activation] Signature mismatch: expected ${txSig}, got ${actualTxSig}`);
+      txSig = actualTxSig;
+    }
+
+    await connection.confirmTransaction(txSig, 'confirmed');
+    console.log('[Activation] Subscribe tx confirmed on-chain:', txSig);
 
     // ─── Step 6: Activate via TxODDS API ─────────────────────────────
     onProgress('activating');
