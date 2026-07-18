@@ -4,31 +4,41 @@
     "instructions": [
         {
             "name": "createPool",
+            "discriminator": [
+                233,
+                146,
+                209,
+                142,
+                207,
+                104,
+                64,
+                188
+            ],
             "accounts": [
                 {
                     "name": "creator",
-                    "isMut": true,
-                    "isSigner": true
+                    "writable": true,
+                    "signer": true
                 },
                 {
                     "name": "pool",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "oracle",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 },
                 {
                     "name": "commissionWallet",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 },
                 {
                     "name": "systemProgram",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 }
             ],
             "args": [
@@ -60,31 +70,41 @@
         },
         {
             "name": "placeBet",
+            "discriminator": [
+                222,
+                62,
+                67,
+                220,
+                63,
+                166,
+                126,
+                33
+            ],
             "accounts": [
                 {
                     "name": "user",
-                    "isMut": true,
-                    "isSigner": true
+                    "writable": true,
+                    "signer": true
                 },
                 {
                     "name": "pool",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "bet",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "vault",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "systemProgram",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 }
             ],
             "args": [
@@ -100,31 +120,41 @@
         },
         {
             "name": "resolvePool",
+            "discriminator": [
+                191,
+                164,
+                190,
+                142,
+                178,
+                198,
+                162,
+                249
+            ],
             "accounts": [
                 {
                     "name": "oracle",
-                    "isMut": true,
-                    "isSigner": true
+                    "writable": true,
+                    "signer": true
                 },
                 {
                     "name": "pool",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "vault",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "commissionWallet",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "systemProgram",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 }
             ],
             "args": [
@@ -136,62 +166,82 @@
         },
         {
             "name": "claimWinnings",
+            "discriminator": [
+                161,
+                215,
+                24,
+                59,
+                14,
+                236,
+                242,
+                221
+            ],
             "accounts": [
                 {
                     "name": "user",
-                    "isMut": true,
-                    "isSigner": true
+                    "writable": true,
+                    "signer": true
                 },
                 {
                     "name": "pool",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 },
                 {
                     "name": "bet",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "vault",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "systemProgram",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 }
             ],
             "args": []
         },
         {
             "name": "refund",
+            "discriminator": [
+                2,
+                96,
+                183,
+                251,
+                63,
+                208,
+                46,
+                46
+            ],
             "accounts": [
                 {
                     "name": "user",
-                    "isMut": true,
-                    "isSigner": true
+                    "writable": true,
+                    "signer": true
                 },
                 {
                     "name": "pool",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "bet",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "vault",
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true,
+                    "signer": false
                 },
                 {
                     "name": "systemProgram",
-                    "isMut": false,
-                    "isSigner": false
+                    "writable": false,
+                    "signer": false
                 }
             ],
             "args": []
@@ -200,11 +250,29 @@
     "accounts": [
         {
             "name": "Pool",
-            "discriminator": [241, 154, 109, 4, 17, 177, 109, 188]
+            "discriminator": [
+                241,
+                154,
+                109,
+                4,
+                17,
+                177,
+                109,
+                188
+            ]
         },
         {
             "name": "Bet",
-            "discriminator": [147, 23, 35, 59, 15, 75, 155, 32]
+            "discriminator": [
+                147,
+                23,
+                35,
+                59,
+                15,
+                75,
+                155,
+                32
+            ]
         }
     ],
     "types": [

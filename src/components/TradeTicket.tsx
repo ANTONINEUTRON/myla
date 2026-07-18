@@ -230,7 +230,7 @@ export default function TradeTicket({
         disabled={isTrading}
       >
         <Text style={styles.confirmTradeTxt}>
-          {isTrading ? 'Processing Transaction...' : `Confirm Prediction  •  ${stake} SOL → ${poolInfo.estPayout.toFixed(3)} SOL`}
+          {isTrading ? 'Processing Transaction...' : `Confirm Prediction`}
         </Text>
       </TouchableOpacity>
 

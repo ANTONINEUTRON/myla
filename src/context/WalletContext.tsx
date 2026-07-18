@@ -221,15 +221,32 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       );
 
       return await transact(async (wallet: any) => {
-        // Reauthorize to ensure the session is active
-        const auth = await wallet.reauthorize({
-          identity: {
-            name: 'MYLA',
-            uri: 'https://symbal.fun',
-            icon: 'favicon.ico',
-          },
-          auth_token: cachedAuthToken,
-        });
+        let auth;
+        try {
+          auth = await wallet.reauthorize({
+            identity: {
+              name: 'MYLA',
+              uri: 'https://symbal.fun',
+              icon: 'favicon.ico',
+            },
+            auth_token: cachedAuthToken,
+          });
+        } catch (reauthErr) {
+          console.warn('[WalletContext] Reauthorize failed in signMessage, falling back to authorize:', reauthErr);
+          auth = await wallet.authorize({
+            identity: {
+              name: 'MYLA',
+              uri: 'https://symbal.fun',
+              icon: 'favicon.ico',
+            },
+            chain: 'solana:devnet',
+          });
+
+          if (auth?.auth_token) {
+            setCachedAuthToken(auth.auth_token);
+            await AsyncStorage.setItem(STORAGE_KEY_AUTH_TOKEN, auth.auth_token);
+          }
+        }
 
         const addressBytes = Buffer.from(auth.accounts[0].address, 'base64');
         const messageBytes = new Uint8Array(Buffer.from(message, 'utf-8'));
@@ -263,23 +280,38 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       );
 
       return await transact(async (wallet: any) => {
-        // Reauthorize to ensure the session is active
-        const auth = await wallet.reauthorize({
-          identity: {
-            name: 'MYLA',
-            uri: 'https://symbal.fun',
-            icon: 'favicon.ico',
-          },
-          auth_token: cachedAuthToken,
-        });
+        let auth;
+        try {
+          auth = await wallet.reauthorize({
+            identity: {
+              name: 'MYLA',
+              uri: 'https://symbal.fun',
+              icon: 'favicon.ico',
+            },
+            auth_token: cachedAuthToken,
+          });
+        } catch (reauthErr) {
+          console.warn('[WalletContext] Reauthorize failed in signAndSendTransaction, falling back to authorize:', reauthErr);
+          auth = await wallet.authorize({
+            identity: {
+              name: 'MYLA',
+              uri: 'https://symbal.fun',
+              icon: 'favicon.ico',
+            },
+            chain: 'solana:devnet',
+          });
 
-        const txBytes = new Uint8Array(Buffer.from(txBase64, 'base64'));
+          if (auth?.auth_token) {
+            setCachedAuthToken(auth.auth_token);
+            await AsyncStorage.setItem(STORAGE_KEY_AUTH_TOKEN, auth.auth_token);
+          }
+        }
 
         const result = await wallet.signAndSendTransactions({
-          transactions: [txBytes],
+          payloads: [txBase64],
         });
 
-        const sigBytes = result.signatures[0];
+        const sigBytes = Buffer.from(result.signatures[0], 'base64');
         const bs58 = require('bs58');
         return bs58.encode(sigBytes);
       });
