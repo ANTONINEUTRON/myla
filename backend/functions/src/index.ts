@@ -328,3 +328,22 @@ export const resolvePoolsCron = functions.pubsub
       console.error('Fatal cron execution error:', err);
     }
   });
+
+export const getProgramConfig = functions.https.onRequest((req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  res.status(200).json({
+    programId: '9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf',
+    oracle: 'FvPajowCadom15Nws9Zx2hEPRWSypWGKrZoAbxgf1Vrm',
+    commissionWallet: 'FvPajowCadom15Nws9Zx2hEPRWSypWGKrZoAbxgf1Vrm',
+    commissionRate: 500
+  });
+});
+
