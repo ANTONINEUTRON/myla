@@ -42,76 +42,14 @@ const admin = __importStar(require("firebase-admin"));
 const anchor = __importStar(require("@coral-xyz/anchor"));
 const web3_js_1 = require("@solana/web3.js");
 const axios_1 = __importDefault(require("axios"));
+const config_1 = require("./config");
+const myla_program_json_1 = __importDefault(require("./idl/myla_program.json"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
 const IDL = {
-    address: '9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf',
-    version: '0.1.0',
-    name: 'myla_program',
-    instructions: [
-        {
-            name: 'resolvePool',
-            accounts: [
-                { name: 'oracle', isMut: true, isSigner: true },
-                { name: 'pool', isMut: true, isSigner: false },
-                { name: 'vault', isMut: true, isSigner: false },
-                { name: 'commissionWallet', isMut: true, isSigner: false },
-                { name: 'systemProgram', isMut: false, isSigner: false }
-            ],
-            args: [{ name: 'actualValue', type: 'u16' }]
-        }
-    ],
-    accounts: [
-        {
-            name: 'Pool',
-            discriminator: [241, 154, 109, 4, 17, 177, 109, 188]
-        },
-        {
-            name: 'Bet',
-            discriminator: [147, 23, 35, 59, 15, 75, 155, 32]
-        }
-    ],
-    types: [
-        {
-            name: 'Pool',
-            type: {
-                kind: 'struct',
-                fields: [
-                    { name: 'matchId', type: 'string' },
-                    { name: 'asset', type: 'string' },
-                    { name: 'strikeLevel', type: 'u16' },
-                    { name: 'strikeMinute', type: 'u8' },
-                    { name: 'deadline', type: 'i64' },
-                    { name: 'overTotal', type: 'u64' },
-                    { name: 'underTotal', type: 'u64' },
-                    { name: 'overCount', type: 'u32' },
-                    { name: 'underCount', type: 'u32' },
-                    { name: 'resolved', type: 'bool' },
-                    { name: 'winningSide', type: { option: 'u8' } },
-                    { name: 'actualValue', type: { option: 'u16' } },
-                    { name: 'commissionRate', type: 'u16' },
-                    { name: 'commissionWallet', type: 'pubkey' },
-                    { name: 'oracle', type: 'pubkey' },
-                    { name: 'bump', type: 'u8' }
-                ]
-            }
-        },
-        {
-            name: 'Bet',
-            type: {
-                kind: 'struct',
-                fields: [
-                    { name: 'pool', type: 'pubkey' },
-                    { name: 'user', type: 'pubkey' },
-                    { name: 'side', type: 'u8' },
-                    { name: 'amount', type: 'u64' },
-                    { name: 'claimed', type: 'bool' },
-                    { name: 'bump', type: 'u8' }
-                ]
-            }
-        }
-    ]
+    ...myla_program_json_1.default,
+    address: config_1.CONFIG.PROGRAM_ID
 };
 // ─── Helper: Get Anchor Program Instance ─────────────────────────────
 function getProgram(connection, oracleKeypair) {
@@ -166,7 +104,7 @@ function extractStatValue(scoreData, asset, targetMinute) {
 }
 // ─── Core Execution: Sync & Resolve Pools ────────────────────────────
 async function executeSyncAndResolve() {
-    const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+    const rpcUrl = config_1.CONFIG.SOLANA_RPC_URL;
     const oracleSecretKeyString = process.env.ORACLE_PRIVATE_KEY;
     const txOddsApiToken = process.env.TXODDS_API_TOKEN;
     const txOddsJwt = process.env.TXODDS_JWT;
@@ -352,10 +290,10 @@ exports.getProgramConfig = functions.https.onRequest((req, res) => {
         return;
     }
     res.status(200).json({
-        programId: '9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf',
-        oracle: 'BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS',
-        commissionWallet: 'BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS',
-        commissionRate: 500
+        programId: config_1.CONFIG.PROGRAM_ID,
+        oracle: config_1.CONFIG.ORACLE_ADDRESS,
+        commissionWallet: config_1.CONFIG.COMMISSION_WALLET,
+        commissionRate: config_1.CONFIG.COMMISSION_RATE
     });
 });
 exports.getPoolDetails = functions.https.onRequest(async (req, res) => {
@@ -381,7 +319,7 @@ exports.getPoolDetails = functions.https.onRequest(async (req, res) => {
             return;
         }
         // Derive Pool PDA
-        const programId = new web3_js_1.PublicKey('9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf');
+        const programId = new web3_js_1.PublicKey(config_1.CONFIG.PROGRAM_ID);
         const strikeLevelBuffer = Buffer.alloc(2);
         strikeLevelBuffer.writeUInt16LE(strikeLevelNum, 0);
         const strikeMinuteBuffer = Buffer.from([strikeMinuteNum]);
