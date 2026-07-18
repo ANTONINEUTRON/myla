@@ -1,0 +1,194 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolvePoolsCron = exports.resolvePoolsHttp = void 0;
+const functions = __importStar(require("firebase-functions"));
+const web3_js_1 = require("@solana/web3.js");
+const axios_1 = __importDefault(require("axios"));
+const config_1 = require("../config");
+const firebase_1 = require("../firebase");
+const solana_1 = require("../helpers/solana");
+const scores_1 = require("../helpers/scores");
+async function executeSyncAndResolve() {
+    const rpcUrl = config_1.CONFIG.SOLANA_RPC_URL;
+    const oracleSecretKeyString = process.env.ORACLE_PRIVATE_KEY;
+    const txOddsApiToken = process.env.TXODDS_API_TOKEN;
+    const txOddsJwt = process.env.TXODDS_JWT;
+    const txOddsOrigin = process.env.TXODDS_BASE_URL || 'https://txline-dev.txodds.com';
+    if (!oracleSecretKeyString) {
+        throw new Error('ORACLE_PRIVATE_KEY environment variable is required');
+    }
+    // Restore Keypair from secret array string
+    const secretKey = Uint8Array.from(JSON.parse(oracleSecretKeyString));
+    const oracleKeypair = web3_js_1.Keypair.fromSecretKey(secretKey);
+    const connection = new web3_js_1.Connection(rpcUrl, 'confirmed');
+    const program = (0, solana_1.getProgram)(connection, oracleKeypair);
+    console.log('Fetching all active pools from Solana...');
+    const pools = await program.account.pool.all();
+    console.log(`Found ${pools.length} total pools on-chain.`);
+    const nowSecs = Math.floor(Date.now() / 1000);
+    for (const poolWrapper of pools) {
+        const poolPubKey = poolWrapper.publicKey;
+        const pool = poolWrapper.account;
+        console.log(`\nProcessing pool: ${poolPubKey.toString()}`);
+        console.log(`Match ID: ${pool.matchId}, Asset: ${pool.asset}, Target: ${pool.strikeLevel / 10} at Min ${pool.strikeMinute}`);
+        console.log(`Deadline: ${new Date(pool.deadline.toNumber() * 1000).toISOString()}`);
+        console.log(`Status: resolved=${pool.resolved}, Over total=${pool.overTotal.toNumber()}, Under total=${pool.underTotal.toNumber()}`);
+        // Derive vault PDA address
+        const [vaultPda] = web3_js_1.PublicKey.findProgramAddressSync([Buffer.from('vault'), poolPubKey.toBuffer()], program.programId);
+        // Save/Update Pool info in Firestore
+        const poolRef = firebase_1.db.collection('pools').doc(poolPubKey.toString());
+        await poolRef.set({
+            address: poolPubKey.toString(),
+            matchId: pool.matchId,
+            asset: pool.asset,
+            strikeLevel: pool.strikeLevel,
+            strikeMinute: pool.strikeMinute,
+            deadline: pool.deadline.toNumber(),
+            overTotal: pool.overTotal.toString(),
+            underTotal: pool.underTotal.toString(),
+            overCount: pool.overCount,
+            underCount: pool.underCount,
+            resolved: pool.resolved,
+            winningSide: pool.winningSide,
+            actualValue: pool.actualValue,
+            commissionWallet: pool.commissionWallet.toString(),
+            oracle: pool.oracle.toString(),
+            updatedAt: firebase_1.admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        // Fetch and Sync all bets for this pool from Solana
+        console.log('Syncing bets to Firestore...');
+        const bets = await program.account.bet.all([
+            {
+                memcmp: {
+                    offset: 8, // offset of `pool` pubkey field in Bet account layout
+                    bytes: poolPubKey.toBase58()
+                }
+            }
+        ]);
+        console.log(`Found ${bets.length} bets for this pool.`);
+        for (const betWrapper of bets) {
+            const bet = betWrapper.account;
+            const betAddress = betWrapper.publicKey.toString();
+            await firebase_1.db.collection('bets').doc(betAddress).set({
+                address: betAddress,
+                poolAddress: poolPubKey.toString(),
+                userWallet: bet.user.toString(),
+                side: bet.side, // 0 = Over, 1 = Under
+                amount: bet.amount.toString(),
+                claimed: bet.claimed,
+                matchId: pool.matchId,
+                asset: pool.asset,
+                strikeLevel: pool.strikeLevel,
+                strikeMinute: pool.strikeMinute,
+                updatedAt: firebase_1.admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+        // Resolve pool if expired and unresolved
+        if (!pool.resolved && pool.deadline.toNumber() <= nowSecs) {
+            console.log('Pool has expired. Attempting resolution via TxODDS API...');
+            if (!txOddsApiToken || !txOddsJwt) {
+                console.warn('Skipping resolution: TxODDS credentials not set in environment.');
+                continue;
+            }
+            try {
+                // Call TxODDS API to get scores
+                const scoreUrl = `${txOddsOrigin}/api/scores/snapshot/${pool.matchId}`;
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${txOddsJwt}`,
+                    'X-Api-Token': txOddsApiToken
+                };
+                console.log(`Calling TxODDS scores: ${scoreUrl}`);
+                const response = await axios_1.default.get(scoreUrl, { headers, timeout: 15_000 });
+                const scores = response.data;
+                if (scores && scores.length > 0) {
+                    // Extract actual stat value scaled ×10
+                    const rawVal = (0, scores_1.extractStatValue)(scores, pool.asset, pool.strikeMinute);
+                    const scaledVal = rawVal * 10;
+                    console.log(`TxODDS statistics extracted: ${pool.asset} at Minute ${pool.strikeMinute} = ${rawVal} (Scaled: ${scaledVal})`);
+                    // Submit ResolvePool transaction to Solana
+                    console.log('Submitting resolution transaction to Solana...');
+                    const txSig = await program.methods
+                        .resolvePool(scaledVal)
+                        .accounts({
+                        oracle: oracleKeypair.publicKey,
+                        pool: poolPubKey,
+                        vault: vaultPda,
+                    })
+                        .signers([oracleKeypair])
+                        .rpc();
+                    console.log(`Pool resolved successfully. Signature: ${txSig}`);
+                }
+            }
+            catch (err) {
+                console.error(`Error resolving pool ${poolPubKey.toString()}:`, err?.message || err);
+            }
+        }
+    }
+}
+exports.resolvePoolsHttp = functions.https.onRequest(async (req, res) => {
+    // Simple API token check for MVP security
+    const token = req.query.token || req.headers.authorization;
+    const expectedToken = process.env.ADMIN_TOKEN || 'myla-admin-secret-token';
+    if (token !== expectedToken && token !== `Bearer ${expectedToken}`) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+    try {
+        await executeSyncAndResolve();
+        res.status(200).send('Successfully completed sync and resolution cycle.');
+    }
+    catch (err) {
+        console.error('Fatal sync and resolve error:', err);
+        res.status(500).send(`Execution failed: ${err?.message || err}`);
+    }
+});
+exports.resolvePoolsCron = functions.pubsub
+    .schedule('every 1 minutes')
+    .onRun(async (context) => {
+    console.log('Cron execution started. Context:', context);
+    try {
+        await executeSyncAndResolve();
+        console.log('Cron execution successfully completed.');
+    }
+    catch (err) {
+        console.error('Fatal cron execution error:', err);
+    }
+});
+//# sourceMappingURL=resolvePools.js.map
