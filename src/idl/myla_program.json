@@ -271,11 +271,11 @@
                     },
                     {
                         "name": "commissionWallet",
-                        "type": "publicKey"
+                        "type": "pubkey"
                     },
                     {
                         "name": "oracle",
-                        "type": "publicKey"
+                        "type": "pubkey"
                     },
                     {
                         "name": "bump",
@@ -291,11 +291,11 @@
                 "fields": [
                     {
                         "name": "pool",
-                        "type": "publicKey"
+                        "type": "pubkey"
                     },
                     {
                         "name": "user",
-                        "type": "publicKey"
+                        "type": "pubkey"
                     },
                     {
                         "name": "side",
