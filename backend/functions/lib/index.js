@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPoolDetails = exports.getProgramConfig = exports.resolvePoolsCron = exports.resolvePoolsHttp = void 0;
+exports.joinWaitlist = exports.getPoolDetails = exports.getProgramConfig = exports.resolvePoolsCron = exports.resolvePoolsHttp = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const anchor = __importStar(require("@coral-xyz/anchor"));
@@ -319,6 +319,10 @@ exports.getPoolDetails = functions.https.onRequest(async (req, res) => {
             return;
         }
         // Derive Pool PDA
+        if (!config_1.CONFIG.PROGRAM_ID) {
+            res.status(500).send('PROGRAM_ID is not configured in backend environment variables');
+            return;
+        }
         const programId = new web3_js_1.PublicKey(config_1.CONFIG.PROGRAM_ID);
         const strikeLevelBuffer = Buffer.alloc(2);
         strikeLevelBuffer.writeUInt16LE(strikeLevelNum, 0);
@@ -396,6 +400,53 @@ exports.getPoolDetails = functions.https.onRequest(async (req, res) => {
     }
     catch (err) {
         console.error('Error fetching pool details:', err);
+        res.status(500).send(`Internal Server Error: ${err?.message || err}`);
+    }
+});
+/**
+ * HTTPS Cloud Function: Join early-access waitlist.
+ * Expects JSON body: { name: string, email: string }
+ */
+exports.joinWaitlist = functions.https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+    if (req.method !== 'POST') {
+        res.status(405).send('Method Not Allowed. Use POST.');
+        return;
+    }
+    try {
+        const { name, email } = req.body;
+        if (!name || !email) {
+            res.status(400).send('Missing name or email in request body.');
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(String(email).trim())) {
+            res.status(400).send('Invalid email format.');
+            return;
+        }
+        const cleanedEmail = String(email).trim().toLowerCase();
+        const cleanedName = String(name).trim();
+        const waitlistRef = db.collection('waitlist').doc(cleanedEmail);
+        const doc = await waitlistRef.get();
+        if (doc.exists) {
+            res.status(200).json({ success: true, message: 'You are already registered on the waitlist!' });
+            return;
+        }
+        await waitlistRef.set({
+            name: cleanedName,
+            email: cleanedEmail,
+            joinedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        res.status(200).json({ success: true, message: 'Successfully joined the waitlist!' });
+    }
+    catch (err) {
+        console.error('Error joining waitlist:', err);
         res.status(500).send(`Internal Server Error: ${err?.message || err}`);
     }
 });

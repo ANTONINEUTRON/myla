@@ -25,6 +25,13 @@ module.exports = {
           muted: "#48484A",
         }
       },
+      fontFamily: {
+        sans: ['PlusJakartaSans-Regular'],
+        medium: ['PlusJakartaSans-Medium'],
+        semibold: ['PlusJakartaSans-SemiBold'],
+        bold: ['PlusJakartaSans-Bold'],
+        extrabold: ['Outfit-ExtraBold'],
+      },
     },
   },
   plugins: [],
