@@ -57,12 +57,12 @@
               <div class="mockup-teams">
                 <div class="mockup-team">
                   <div class="team-dot home"></div>
-                  <span>Viet Nam</span>
+                  <span>France</span>
                 </div>
                 <div class="mockup-score">2 - 0</div>
                 <div class="mockup-team">
                   <div class="team-dot away"></div>
-                  <span>Myanmar</span>
+                  <span>Spain</span>
                 </div>
               </div>
             </div>
@@ -164,6 +164,10 @@
             <label for="user-email">Email Address</label>
             <input type="email" id="user-email" name="email" placeholder="name@example.com" required autocomplete="email">
           </div>
+          <div class="form-group">
+            <label for="user-wallet">Solana Wallet Address (Optional)</label>
+            <input type="text" id="user-wallet" name="wallet" placeholder="Enter your Solana address (Base58)">
+          </div>
           <button type="submit" class="btn btn-primary btn-block" id="submit-waitlist-btn">Submit Request</button>
         </form>
       </div>
@@ -173,8 +177,8 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
         <h2 class="modal-title">You're on the list!</h2>
-        <p class="modal-subtitle">Thank you for joining. We'll send invite keys and early access instructions to <span id="registered-email" class="success-highlight"></span> as soon as slots open up.</p>
-        <button class="btn btn-secondary btn-block modal-close-btn">Close Window</button>
+        <p class="modal-subtitle">Thank you for joining. We'll send early access instructions to <span id="registered-email" class="success-highlight"></span> as soon as slots open up.</p>
+        <button class="btn btn-secondary btn-block modal-close-btn"></button>
       </div>
       
       <div id="waitlist-error-banner" class="error-banner hidden"></div>

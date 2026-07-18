@@ -74,13 +74,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const nameInput = document.getElementById('user-name');
     const emailInput = document.getElementById('user-email');
+    const walletInput = document.getElementById('user-wallet');
 
     const name = nameInput.value.trim();
     const email = emailInput.value.trim();
+    const wallet = walletInput ? walletInput.value.trim() : '';
 
     if (!name || !email) {
-      showError('Please fill out all input fields.');
+      showError('Please fill out all required fields.');
       return;
+    }
+
+    if (wallet) {
+      const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      if (!base58Regex.test(wallet)) {
+        showError('Please enter a valid Solana wallet address (Base58).');
+        return;
+      }
     }
 
     // Set loading button state
@@ -94,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, walletAddress: wallet || undefined }),
       });
 
       if (!response.ok) {
