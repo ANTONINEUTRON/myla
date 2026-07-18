@@ -37,8 +37,8 @@ import { CONFIG } from '../config';
 
 // ── Devnet config ────────────────────────────────────────────────
 const RPC_URL = CONFIG.SOLANA_RPC_URL;
-const PROGRAM_ID = new PublicKey('6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J');
-const TXL_TOKEN_MINT = new PublicKey('4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG');
+const PROGRAM_ID = new PublicKey(CONFIG.TX_PROGRAM_ID);
+const TXL_TOKEN_MINT = new PublicKey(CONFIG.TX_TOKEN_MINT);
 const SERVICE_LEVEL_ID = 1;  // World Cup + Int Friendlies (60s delay, free)
 const DURATION_WEEKS = 4;    // Minimum subscription unit
 
