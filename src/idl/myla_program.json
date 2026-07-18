@@ -200,6 +200,16 @@
     "accounts": [
         {
             "name": "Pool",
+            "discriminator": [241, 154, 109, 4, 17, 177, 109, 188]
+        },
+        {
+            "name": "Bet",
+            "discriminator": [147, 23, 35, 59, 15, 75, 155, 32]
+        }
+    ],
+    "types": [
+        {
+            "name": "Pool",
             "type": {
                 "kind": "struct",
                 "fields": [
