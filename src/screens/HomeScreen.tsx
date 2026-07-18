@@ -249,7 +249,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.titleWrapper}>
           <Text style={styles.title}>MYLA</Text>
-          <Text style={styles.subtitle}>Sports Binary Options Terminal</Text>
+          {/* <Text style={styles.subtitle}>Sports Binary Options Terminal</Text> */}
         </View>
         <View style={styles.balancePill}>
           <Text style={styles.balanceText}>{walletBalance.toFixed(3)} SOL</Text>
