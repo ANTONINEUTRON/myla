@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
+import { CONFIG } from '../config';
 
 const STORAGE_KEY_AUTH_TOKEN = 'myla_wallet_auth_token';
 
@@ -37,15 +38,18 @@ export const WalletContext = createContext<WalletState>({
 });
 
 /**
- * Decode a Base64-encoded Solana address and return it as-is.
+ * Decode a Base64-encoded Solana address to Base58 format.
  * The address comes Base64-encoded from the MWA protocol.
- * For display/conversion to Base58, @solana/web3.js PublicKey can be used.
  */
 function base64ToBase58(base64Address: string): string {
-  // The MWA protocol returns addresses Base64-encoded.
-  // For now we return it raw; the UI can convert using @solana/web3.js if needed.
-  // Base64-encoded Solana addresses are ~44 chars, Base58 are ~32-44 chars.
-  return base64Address;
+  try {
+    const buffer = Buffer.from(base64Address, 'base64');
+    const publicKey = new PublicKey(buffer);
+    return publicKey.toBase58();
+  } catch (err) {
+    console.error('Failed to convert base64 address to base58:', err);
+    return base64Address;
+  }
 }
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -60,8 +64,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-      const pubkey = new PublicKey(Buffer.from(address, 'base64'));
+      const connection = new Connection(CONFIG.SOLANA_RPC_URL, 'confirmed');
+      const pubkey = new PublicKey(address);
       const lamports = await connection.getBalance(pubkey);
       setBalance(lamports / 1e9);
     } catch (err) {
@@ -115,7 +119,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 uri: 'https://symbal.fun',
                 icon: 'favicon.ico',
               },
-              chain: 'solana:mainnet',
+              chain: 'solana:devnet',
               ...(cachedAuthToken
                 ? { auth_token: cachedAuthToken }
                 : {}),

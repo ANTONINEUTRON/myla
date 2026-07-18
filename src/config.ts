@@ -2,7 +2,7 @@
 
 export const CONFIG = {
   // Firebase Cloud Functions base URL
-  FIREBASE_FUNCTIONS_URL: 'https://us-central1-myla-world-cup.cloudfunctions.net',
+  FIREBASE_FUNCTIONS_URL: 'https://us-central1-myla-fb363.cloudfunctions.net',
   
   // Solana RPC Endpoint
   SOLANA_RPC_URL: 'https://api.devnet.solana.com',

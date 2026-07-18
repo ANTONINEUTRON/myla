@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../theme';
 import PoolBreakdown, { PoolInfo } from './PoolBreakdown';
 import CustomStakeModal from './CustomStakeModal';
+import { CONFIG } from '../config';
 
 interface TradeTicketProps {
+  matchId: string;
   asset: 'goals' | 'corners' | 'cards';
   currentValue: number;
   selection: { strikeMinute: number; strikeLevel: number } | null;
@@ -15,20 +17,13 @@ interface TradeTicketProps {
   stake: number;
   setStake: (val: number) => void;
   onExecute: () => void;
+  isTrading?: boolean;
 }
-
-// ─── Static demo pool data (replaced by on-chain reads later) ────────
-const DEMO_POOL = {
-  overTotal: 0.85,   // SOL staked on Over
-  underTotal: 0.55,  // SOL staked on Under
-  overCount: 4,      // Number of Over bettors
-  underCount: 3,     // Number of Under bettors
-  commissionRate: 0.05, // 5%
-};
 
 const PRESETS = [0.05, 0.1, 0.5];
 
 export default function TradeTicket({
+  matchId,
   asset,
   currentValue,
   selection,
@@ -37,15 +32,81 @@ export default function TradeTicket({
   odds,
   stake,
   setStake,
-  onExecute
+  onExecute,
+  isTrading = false
 }: TradeTicketProps) {
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [isLoadingPool, setIsLoadingPool] = useState(false);
+  const [poolData, setPoolData] = useState<{
+    overTotal: number;
+    underTotal: number;
+    overCount: number;
+    underCount: number;
+    commissionRate: number;
+    exists: boolean;
+  }>({
+    overTotal: 0,
+    underTotal: 0,
+    overCount: 0,
+    underCount: 0,
+    commissionRate: 0.05,
+    exists: false
+  });
 
   const isCustomSelected = useMemo(() => !PRESETS.includes(stake), [stake]);
 
+  // ─── Fetch Pool details from REST API ──────────────────────────────
+  useEffect(() => {
+    if (!selection) return;
+
+    let isMounted = true;
+    const fetchPoolDetails = async () => {
+      setIsLoadingPool(true);
+      try {
+        const scaledStrikeLevel = Math.round(selection.strikeLevel * 10);
+        const url = `${CONFIG.FIREBASE_FUNCTIONS_URL}/getPoolDetails?matchId=${matchId}&asset=${asset}&strikeLevel=${scaledStrikeLevel}&strikeMinute=${selection.strikeMinute}`;
+        
+        console.log(`[TradeTicket] Fetching pool details: ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        if (isMounted) {
+          console.log('[TradeTicket] Pool details loaded:', data);
+          // Convert from lamports (string/BN) to SOL
+          const overSol = Number(data.overTotal || '0') / 1e9;
+          const underSol = Number(data.underTotal || '0') / 1e9;
+          
+          setPoolData({
+            overTotal: overSol,
+            underTotal: underSol,
+            overCount: data.overCount || 0,
+            underCount: data.underCount || 0,
+            commissionRate: 0.05, // 5% flat fee
+            exists: data.exists || false
+          });
+        }
+      } catch (err) {
+        console.warn('[TradeTicket] Failed to load pool state:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingPool(false);
+        }
+      }
+    };
+
+    fetchPoolDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [matchId, asset, selection]);
+
   // ─── Pool payout calculations ─────────────────────────────────────
   const poolInfo: PoolInfo = useMemo(() => {
-    const pool = DEMO_POOL;
+    const pool = poolData;
     const mySide = tradeDirection === 'hi' ? 'over' : 'under';
     const mySideTotal = (mySide === 'over' ? pool.overTotal : pool.underTotal) + stake;
     const oppSideTotal = mySide === 'over' ? pool.underTotal : pool.overTotal;
@@ -88,7 +149,7 @@ export default function TradeTicket({
       overPct,
       hasOpponents: oppSideTotal > 0,
     };
-  }, [tradeDirection, stake]);
+  }, [poolData, tradeDirection, stake]);
 
   if (!selection) {
     return (
@@ -100,9 +161,12 @@ export default function TradeTicket({
 
   return (
     <View style={styles.tradeSheet}>
-      <Text style={styles.sheetTitle}>
-        Target: {asset.toUpperCase()} @ Minute {selection.strikeMinute}
-      </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={styles.sheetTitle}>
+          Target: {asset.toUpperCase()} @ Minute {selection.strikeMinute}
+        </Text>
+        {isLoadingPool && <ActivityIndicator size="small" color={THEME.colors.primary.DEFAULT} />}
+      </View>
       <Text style={styles.sheetSubtitle}>
         Line: {selection.strikeLevel} (Current Score/Stats: {currentValue})
       </Text>
@@ -160,9 +224,13 @@ export default function TradeTicket({
       {/* Pool Breakdown Component */}
       <PoolBreakdown poolInfo={poolInfo} />
 
-      <TouchableOpacity style={styles.confirmTradeBtn} onPress={onExecute}>
+      <TouchableOpacity 
+        style={[styles.confirmTradeBtn, isTrading && { backgroundColor: THEME.colors.border }]} 
+        onPress={onExecute}
+        disabled={isTrading}
+      >
         <Text style={styles.confirmTradeTxt}>
-          Confirm Prediction  •  {stake} SOL → {poolInfo.estPayout.toFixed(3)} SOL
+          {isTrading ? 'Processing Transaction...' : `Confirm Prediction  •  ${stake} SOL → ${poolInfo.estPayout.toFixed(3)} SOL`}
         </Text>
       </TouchableOpacity>
 

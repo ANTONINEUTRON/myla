@@ -52,6 +52,7 @@ export default function InteractiveMatchCard({
     maxVal,
     currentValue,
     executeTrade,
+    isTrading,
     cashOut,
     getCashOutAmount
   } = useMatchSimulation(
@@ -210,6 +211,7 @@ export default function InteractiveMatchCard({
 
           {/* Option ticket form */}
           <TradeTicket
+            matchId={match.id}
             asset={asset}
             currentValue={currentValue}
             selection={selection}
@@ -219,6 +221,7 @@ export default function InteractiveMatchCard({
             stake={stake}
             setStake={setStake}
             onExecute={executeTrade}
+            isTrading={isTrading}
           />
 
           {/* User Positions list ledger */}

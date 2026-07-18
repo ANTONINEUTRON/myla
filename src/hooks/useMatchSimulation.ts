@@ -3,6 +3,9 @@ import { Alert } from 'react-native';
 import { Match } from '../types';
 import { txoddsService } from '../services/txodds';
 import { useWallet } from './useWallet';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { buildAtomicBetTransaction } from '../services/pool-program';
+import { CONFIG } from '../config';
 
 export type OptionAsset = 'goals' | 'corners' | 'cards';
 
@@ -35,6 +38,7 @@ export function useMatchSimulation(
   const [stake, setStake] = useState<number>(0.1);
   const [tradeDirection, setTradeDirection] = useState<'hi' | 'lo'>('hi');
   const [selection, setSelection] = useState<{ strikeMinute: number; strikeLevel: number } | null>(null);
+  const [isTrading, setIsTrading] = useState(false);
 
   // Scoreboard sim state
   const [simState, setSimState] = useState({
@@ -294,7 +298,7 @@ export function useMatchSimulation(
   }, [simState.minute, currentValue]);
 
   // Execute trade
-  const { walletAddress, signMessage, signAndSendTransaction } = useWallet();
+  const { walletAddress, signAndSendTransaction } = useWallet();
 
   const executeTrade = useCallback(async () => {
     if (!selection || !match) return;
@@ -308,18 +312,76 @@ export function useMatchSimulation(
       return;
     }
 
+    setIsTrading(true);
     try {
-      // 1. Sign connection message to authenticate with MYLA Program
-      const message = `Sign connection to MYLA Pool: ${asset.toUpperCase()} ${tradeDirection.toUpperCase()} ${selection.strikeLevel} @ Min ${selection.strikeMinute}`;
-      await signMessage(message);
+      if (walletAddress.startsWith('DevWallet') || walletAddress === 'DevWallet111111111111111111111111111111111111') {
+        // Dev/simulated wallet flow
+        const txHash = 'mocktx' + Math.random().toString(36).substring(2, 15);
+        const oddsRatio = tradeDirection === 'hi' ? odds.hi : odds.lo;
+        const newPosition: OptionPosition = {
+          id: txHash,
+          matchId: match.id,
+          asset,
+          strikeMinute: selection.strikeMinute,
+          strikeLevel: selection.strikeLevel,
+          direction: tradeDirection,
+          buyMinute: simState.minute,
+          buyValue: currentValue,
+          stake,
+          payout: oddsRatio,
+          status: 'pending'
+        };
+        setWalletBalance((b) => parseFloat((b - stake).toFixed(2)));
+        setPositions((prev) => [newPosition, ...prev]);
+        setSelection(null);
+        Alert.alert('Prediction Created (Demo Mode)', 'Your demo prediction has been created.');
+        return;
+      }
 
-      // 2. Simulate transaction hash
-      const txHash = '5t2nMaoQyhpmoLTCc4dSq8M2Y3C8DE2X9N15mG7nGttW' + Math.random().toString(36).substring(2, 8);
+      // Real Solana Devnet MWA Flow
+      const userPubkey = new PublicKey(walletAddress);
+      const connection = new Connection(CONFIG.SOLANA_RPC_URL, 'confirmed');
 
-      // 3. Record local position
+      // Side: 0 = Over, 1 = Under
+      const side = tradeDirection === 'hi' ? 0 : 1;
+      const amountLamports = Math.round(stake * 1e9);
+      const scaledStrikeLevel = Math.round(selection.strikeLevel * 10);
+      const deadline = Math.floor(Date.now() / 1000) + 120; // 2 minutes from now
+
+      console.log(`[useMatchSimulation] Building atomic transaction:
+        User: ${userPubkey.toBase58()}
+        Match: ${match.id}
+        Asset: ${asset}
+        Strike Level: ${scaledStrikeLevel}
+        Strike Minute: ${selection.strikeMinute}
+        Side: ${side}
+        Amount (Lamports): ${amountLamports}
+        Deadline: ${deadline}`);
+
+      const transaction = await buildAtomicBetTransaction(
+        connection,
+        userPubkey,
+        match.id,
+        asset,
+        scaledStrikeLevel,
+        selection.strikeMinute,
+        deadline,
+        side,
+        amountLamports
+      );
+
+      // Serialize the built transaction to base64
+      const serializedTx = transaction.serialize({ requireAllSignatures: false });
+      const txBase64 = serializedTx.toString('base64');
+
+      console.log('[useMatchSimulation] Sending transaction to Mobile Wallet Adapter...');
+      const txSig = await signAndSendTransaction(txBase64);
+      console.log('[useMatchSimulation] Transaction signature returned:', txSig);
+
+      // Record local position
       const oddsRatio = tradeDirection === 'hi' ? odds.hi : odds.lo;
       const newPosition: OptionPosition = {
-        id: Math.random().toString(36).substring(2, 11),
+        id: txSig,
         matchId: match.id,
         asset,
         strikeMinute: selection.strikeMinute,
@@ -332,16 +394,32 @@ export function useMatchSimulation(
         status: 'pending'
       };
 
-      setWalletBalance((b) => parseFloat((b - stake).toFixed(2)));
+      // Refresh balance from blockchain
+      try {
+        const balanceLamports = await connection.getBalance(userPubkey);
+        setWalletBalance(balanceLamports / 1e9);
+      } catch (balErr) {
+        console.warn('Failed to refresh on-chain balance:', balErr);
+        setWalletBalance((b) => parseFloat((b - stake).toFixed(2)));
+      }
+
       setPositions((prev) => [newPosition, ...prev]);
       setSelection(null);
 
-      Alert.alert('Prediction Created', 'Your micro-prediction has been placed on-chain via the MYLA Program.');
+      Alert.alert(
+        'Prediction Created', 
+        `Your prediction has been successfully placed on-chain!\n\nSignature: ${txSig.substring(0, 12)}...`,
+        [
+          { text: 'OK' }
+        ]
+      );
     } catch (err: any) {
       console.error('[useMatchSimulation] executeTrade failed:', err);
       Alert.alert('Transaction Failed', err?.message || 'Failed to place prediction on-chain.');
+    } finally {
+      setIsTrading(false);
     }
-  }, [selection, match, walletBalance, stake, tradeDirection, odds, asset, currentValue, simState.minute, walletAddress, signMessage, setWalletBalance, setPositions, setSelection]);
+  }, [selection, match, walletBalance, stake, tradeDirection, odds, asset, currentValue, simState.minute, walletAddress, setWalletBalance, setPositions, setSelection, signAndSendTransaction]);
 
   const cashOut = useCallback((pos: OptionPosition) => {
     const cashValue = getCashOutAmount(pos);
@@ -372,6 +450,7 @@ export function useMatchSimulation(
     maxVal,
     currentValue,
     executeTrade,
+    isTrading,
     cashOut,
     getCashOutAmount,
     resetSimulation
