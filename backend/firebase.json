@@ -2,6 +2,9 @@
   "functions": {
     "source": "functions",
     "codeTransformations": true,
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run build"
+    ],
     "ignore": [
       "node_modules",
       ".git",

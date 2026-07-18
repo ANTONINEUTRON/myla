@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resolvePoolsCron = exports.resolvePoolsHttp = void 0;
+exports.getPoolDetails = exports.getProgramConfig = exports.resolvePoolsCron = exports.resolvePoolsHttp = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const anchor = __importStar(require("@coral-xyz/anchor"));
@@ -46,9 +46,9 @@ const axios_1 = __importDefault(require("axios"));
 admin.initializeApp();
 const db = admin.firestore();
 const IDL = {
-    address: 'BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS',
+    address: '9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf',
     version: '0.1.0',
-    name: 'myla_pool',
+    name: 'myla_program',
     instructions: [
         {
             name: 'resolvePool',
@@ -63,6 +63,16 @@ const IDL = {
         }
     ],
     accounts: [
+        {
+            name: 'Pool',
+            discriminator: [241, 154, 109, 4, 17, 177, 109, 188]
+        },
+        {
+            name: 'Bet',
+            discriminator: [147, 23, 35, 59, 15, 75, 155, 32]
+        }
+    ],
+    types: [
         {
             name: 'Pool',
             type: {
@@ -81,8 +91,8 @@ const IDL = {
                     { name: 'winningSide', type: { option: 'u8' } },
                     { name: 'actualValue', type: { option: 'u16' } },
                     { name: 'commissionRate', type: 'u16' },
-                    { name: 'commissionWallet', type: 'publicKey' },
-                    { name: 'oracle', type: 'publicKey' },
+                    { name: 'commissionWallet', type: 'pubkey' },
+                    { name: 'oracle', type: 'pubkey' },
                     { name: 'bump', type: 'u8' }
                 ]
             }
@@ -92,8 +102,8 @@ const IDL = {
             type: {
                 kind: 'struct',
                 fields: [
-                    { name: 'pool', type: 'publicKey' },
-                    { name: 'user', type: 'publicKey' },
+                    { name: 'pool', type: 'pubkey' },
+                    { name: 'user', type: 'pubkey' },
                     { name: 'side', type: 'u8' },
                     { name: 'amount', type: 'u64' },
                     { name: 'claimed', type: 'bool' },
@@ -331,6 +341,124 @@ exports.resolvePoolsCron = functions.pubsub
     }
     catch (err) {
         console.error('Fatal cron execution error:', err);
+    }
+});
+exports.getProgramConfig = functions.https.onRequest((req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+    res.status(200).json({
+        programId: '9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf',
+        oracle: 'BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS',
+        commissionWallet: 'BiqsXC7Uqskmp5ucSmfUww6bwVqNVnAYEE2FGvifD8kS',
+        commissionRate: 500
+    });
+});
+exports.getPoolDetails = functions.https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+    try {
+        const { matchId, asset, strikeLevel, strikeMinute } = req.query;
+        if (!matchId || !asset || !strikeLevel || !strikeMinute) {
+            res.status(400).send('Missing required parameters: matchId, asset, strikeLevel, strikeMinute');
+            return;
+        }
+        const matchIdStr = String(matchId);
+        const assetStr = String(asset);
+        const strikeLevelNum = Number(strikeLevel);
+        const strikeMinuteNum = Number(strikeMinute);
+        if (isNaN(strikeLevelNum) || isNaN(strikeMinuteNum)) {
+            res.status(400).send('Invalid parameter types: strikeLevel and strikeMinute must be numbers');
+            return;
+        }
+        // Derive Pool PDA
+        const programId = new web3_js_1.PublicKey('9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf');
+        const strikeLevelBuffer = Buffer.alloc(2);
+        strikeLevelBuffer.writeUInt16LE(strikeLevelNum, 0);
+        const strikeMinuteBuffer = Buffer.from([strikeMinuteNum]);
+        const [poolPda] = web3_js_1.PublicKey.findProgramAddressSync([
+            Buffer.from('pool'),
+            Buffer.from(matchIdStr),
+            Buffer.from(assetStr),
+            strikeLevelBuffer,
+            strikeMinuteBuffer
+        ], programId);
+        const poolAddress = poolPda.toString();
+        // Query Firestore
+        const poolDoc = await db.collection('pools').doc(poolAddress).get();
+        if (!poolDoc.exists) {
+            // Default uninitialized response
+            res.status(200).json({
+                address: poolAddress,
+                exists: false,
+                matchId: matchIdStr,
+                asset: assetStr,
+                strikeLevel: strikeLevelNum,
+                strikeMinute: strikeMinuteNum,
+                overCount: 0,
+                underCount: 0,
+                overTotal: '0',
+                underTotal: '0',
+                resolved: false,
+                winningSide: null,
+                actualValue: null,
+                calculatedPayouts: {
+                    over: 1.0,
+                    under: 1.0
+                }
+            });
+            return;
+        }
+        const poolData = poolDoc.data();
+        const overTotalStr = poolData.overTotal || '0';
+        const underTotalStr = poolData.underTotal || '0';
+        const overTotalNum = Number(overTotalStr);
+        const underTotalNum = Number(underTotalStr);
+        const totalPool = overTotalNum + underTotalNum;
+        // Default Commission Rate: 5% (500 bps)
+        const commissionRate = poolData.commissionRate || 500;
+        const netPool = totalPool * (1 - commissionRate / 10000);
+        let overPayout = 1.0;
+        let underPayout = 1.0;
+        if (overTotalNum > 0) {
+            overPayout = netPool / overTotalNum;
+        }
+        if (underTotalNum > 0) {
+            underPayout = netPool / underTotalNum;
+        }
+        res.status(200).json({
+            address: poolAddress,
+            exists: true,
+            matchId: poolData.matchId,
+            asset: poolData.asset,
+            strikeLevel: poolData.strikeLevel,
+            strikeMinute: poolData.strikeMinute,
+            deadline: poolData.deadline,
+            overCount: poolData.overCount || 0,
+            underCount: poolData.underCount || 0,
+            overTotal: overTotalStr,
+            underTotal: underTotalStr,
+            resolved: poolData.resolved || false,
+            winningSide: poolData.winningSide !== undefined ? poolData.winningSide : null,
+            actualValue: poolData.actualValue !== undefined ? poolData.actualValue : null,
+            calculatedPayouts: {
+                over: Number(overPayout.toFixed(4)),
+                under: Number(underPayout.toFixed(4))
+            }
+        });
+    }
+    catch (err) {
+        console.error('Error fetching pool details:', err);
+        res.status(500).send(`Internal Server Error: ${err?.message || err}`);
     }
 });
 //# sourceMappingURL=index.js.map
