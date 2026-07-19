@@ -16,7 +16,7 @@ graph TD
     MWA["Mobile Wallet Adapter (MWA)"]
     Solana["Solana Blockchain (Devnet)"]
     Oracle["Oracle Backend"]
-    TxODDS["TxODDS Fusion API"]
+    TxODDS["TxODDS API"]
     OracleDB["Oracle Store"]
 
     User -->|Sign and Send Transaction| MWA
