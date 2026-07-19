@@ -17,14 +17,15 @@ graph TD
     Solana["Solana Blockchain (Devnet)"]
     Oracle["Oracle Backend"]
     TxODDS["TxODDS Fusion API"]
-    OracleStore["Firestore DB"]
+    OracleDB["Oracle Store"]
 
     User -->|Sign and Send Transaction| MWA
     MWA -->|Place Bet / Claim| Solana
-    User -->|Fetch Active Matches and Odds| OracleStore
-    User -->|Subscribe to real-time updates| OracleStore
-    OracleStore -->|Poll Live scores and stats| TxODDS
-    OracleStore -->|Submit ResolvePool Tx| Solana
+    User -->|Fetch Active Matches and Odds| Oracle
+    Oracle -->|Poll Live scores and stats| TxODDS
+    Oracle -->|Sync pool and bet status| OracleDB
+    User -->|Subscribe to real-time updates| OracleDB
+    Oracle -->|Submit ResolvePool Tx| Solana
 ```
 
 ### End-to-End Prediction Lifecycle
