@@ -53,10 +53,16 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
   const awayTeam = f.Participant1IsHome ? f.Participant2 : f.Participant1;
 
   let startTimeVal: any = f.StartTime;
-  if (typeof startTimeVal === 'string' && /^\d+$/.test(startTimeVal)) {
-    startTimeVal = parseInt(startTimeVal, 10);
+  if (typeof startTimeVal === 'number') {
+    startTimeVal = startTimeVal < 10000000000 ? startTimeVal * 1000 : startTimeVal;
+  } else if (typeof startTimeVal === 'string') {
+    if (/^\d+$/.test(startTimeVal)) {
+      const valNum = parseInt(startTimeVal, 10);
+      startTimeVal = valNum < 10000000000 ? valNum * 1000 : valNum;
+    }
   }
   const startMs = new Date(startTimeVal).getTime();
+  const startTimeISO = new Date(startTimeVal).toISOString();
   const nowMs = Date.now();
 
   let status: Match['status'] = 'upcoming';
@@ -90,7 +96,7 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
       } else if (latest.Clock?.Seconds !== undefined && latest.Clock?.Seconds !== null) {
         minute = Math.floor(latest.Clock.Seconds / 60);
       } else {
-        minute = Math.min(90, Math.floor((nowMs - startMs) / 60000));
+        minute = Math.min(90, Math.max(0, Math.floor((nowMs - startMs) / 60000)));
       }
 
       const p1Goals = latest.Stats?.[1] ?? 0;
@@ -103,7 +109,7 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
         awayScore = p1Goals;
       }
     } else {
-      minute = Math.min(90, Math.floor((nowMs - startMs) / 60000));
+      minute = Math.min(90, Math.max(0, Math.floor((nowMs - startMs) / 60000)));
     }
   } else {
     status = 'upcoming';
@@ -118,7 +124,7 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
     awayScore,
     minute,
     status,
-    startTime: f.StartTime,
+    startTime: startTimeISO,
     competition: f.Competition || 'FIFA World Cup 2026'
   };
 }

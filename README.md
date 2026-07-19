@@ -4,6 +4,10 @@
 
 **Built for:** Solana Seeker dapp store (React Native + Solana Mobile Stack + Custom Anchor Program)
 
+## 📲 App Download
+Access the latest MYLA mobile app build directly on your Seeker device or Android Device:
+* **Devnet Build Download**: [Expo Build](https://expo.dev/accounts/neutronuno/projects/myla/builds/0fdac73b-15bc-4cbe-8a61-b2cc36929680)
+
 ---
 
 ## The Pitch

@@ -110,32 +110,27 @@ export function useMatchSimulation(
     if (!match) return;
     try {
       const scores = await txoddsService.getScores(match.id);
-      if (!scores || scores.length === 0) {
-        Alert.alert('Error', 'Failed to fetch live match updates from TxODDS: Empty match data.');
-        return;
-      }
-      
-      const latest = scores[scores.length - 1];
+      const latest = (scores && scores.length > 0) ? scores[scores.length - 1] : null;
 
       // Parse current minute
       let currentMin = 0;
-      if (latest.Minute !== undefined && latest.Minute !== null) {
+      if (latest && latest.Minute !== undefined && latest.Minute !== null) {
         currentMin = latest.Minute;
-      } else if (latest.Clock?.Seconds !== undefined && latest.Clock?.Seconds !== null) {
+      } else if (latest && latest.Clock?.Seconds !== undefined && latest.Clock?.Seconds !== null) {
         currentMin = Math.floor(latest.Clock.Seconds / 60);
       } else {
         const startMs = new Date(match.startTime).getTime();
-        currentMin = Math.min(90, Math.floor((Date.now() - startMs) / 60000));
+        currentMin = Math.min(90, Math.max(0, Math.floor((Date.now() - startMs) / 60000)));
       }
 
-      const hGoals = latest.Stats?.['1'] ?? 0;
-      const aGoals = latest.Stats?.['2'] ?? 0;
-      const hCorners = latest.Stats?.['3'] ?? 0;
-      const aCorners = latest.Stats?.['4'] ?? 0;
-      const hYellow = latest.Stats?.['5'] ?? 0;
-      const aYellow = latest.Stats?.['6'] ?? 0;
-      const hRed = latest.Stats?.['7'] ?? 0;
-      const aRed = latest.Stats?.['8'] ?? 0;
+      const hGoals = latest?.Stats?.['1'] ?? 0;
+      const aGoals = latest?.Stats?.['2'] ?? 0;
+      const hCorners = latest?.Stats?.['3'] ?? 0;
+      const aCorners = latest?.Stats?.['4'] ?? 0;
+      const hYellow = latest?.Stats?.['5'] ?? 0;
+      const aYellow = latest?.Stats?.['6'] ?? 0;
+      const hRed = latest?.Stats?.['7'] ?? 0;
+      const aRed = latest?.Stats?.['8'] ?? 0;
 
       const totalCorners = hCorners + aCorners;
       const totalCards = hYellow + aYellow + hRed + aRed;
@@ -145,23 +140,25 @@ export function useMatchSimulation(
       const nextCorners = new Array(91).fill(0);
       const nextCards = new Array(91).fill(0);
 
-      scores.forEach((entry) => {
-        let m = 0;
-        if (entry.Minute !== undefined && entry.Minute !== null) {
-          m = entry.Minute;
-        } else if (entry.Clock?.Seconds !== undefined && entry.Clock?.Seconds !== null) {
-          m = Math.floor(entry.Clock.Seconds / 60);
-        }
-        m = Math.max(0, Math.min(90, m));
+      if (scores && scores.length > 0) {
+        scores.forEach((entry) => {
+          let m = 0;
+          if (entry.Minute !== undefined && entry.Minute !== null) {
+            m = entry.Minute;
+          } else if (entry.Clock?.Seconds !== undefined && entry.Clock?.Seconds !== null) {
+            m = Math.floor(entry.Clock.Seconds / 60);
+          }
+          m = Math.max(0, Math.min(90, m));
 
-        const eg = (entry.Stats?.['1'] ?? 0) + (entry.Stats?.['2'] ?? 0);
-        const ec = (entry.Stats?.['3'] ?? 0) + (entry.Stats?.['4'] ?? 0);
-        const ecd = (entry.Stats?.['5'] ?? 0) + (entry.Stats?.['6'] ?? 0) + (entry.Stats?.['7'] ?? 0) + (entry.Stats?.['8'] ?? 0);
+          const eg = (entry.Stats?.['1'] ?? 0) + (entry.Stats?.['2'] ?? 0);
+          const ec = (entry.Stats?.['3'] ?? 0) + (entry.Stats?.['4'] ?? 0);
+          const ecd = (entry.Stats?.['5'] ?? 0) + (entry.Stats?.['6'] ?? 0) + (entry.Stats?.['7'] ?? 0) + (entry.Stats?.['8'] ?? 0);
 
-        nextGoals[m] = eg;
-        nextCorners[m] = ec;
-        nextCards[m] = ecd;
-      });
+          nextGoals[m] = eg;
+          nextCorners[m] = ec;
+          nextCards[m] = ecd;
+        });
+      }
 
       // Forward fill gaps up to currentMin
       let lastG = 0, lastC = 0, lastCd = 0;
@@ -217,11 +214,11 @@ export function useMatchSimulation(
       );
 
     } catch (err: any) {
-      Alert.alert('Error', `Failed to fetch live match updates from TxODDS: ${err?.message || err}`);
+      console.warn('[useMatchSimulation] Failed to fetch live match updates from TxODDS:', err?.message || err);
     }
   }, [match, setPositions, setWalletBalance, triggerConfetti]);
 
-  // ─── Live Polling from TxODDS ────────────────────────────────────
+  // ─── Live Polling from TxODDS (Only for Real Live Matches) ───────────────────
   useEffect(() => {
     if (!match || match.status !== 'live') return;
 
@@ -232,6 +229,97 @@ export function useMatchSimulation(
     const interval = setInterval(fetchLiveScores, 12_000);
     return () => clearInterval(interval);
   }, [match, fetchLiveScores]);
+
+  // ─── Simulation Clock Loop (For Upcoming or Finished/Demo Previews) ──────────
+  useEffect(() => {
+    if (!match || !isRunning) return;
+    if (match.status === 'live') return;
+
+    const interval = setInterval(() => {
+      setSimState((prev) => {
+        if (prev.minute >= 90) {
+          setIsRunning(false);
+          return { ...prev, status: 'finished' };
+        }
+
+        const nextMin = prev.minute + 1;
+
+        // Randomly simulate event increases
+        let nextHomeScore = prev.homeScore;
+        let nextAwayScore = prev.awayScore;
+        let nextCorners = prev.corners;
+        let nextCards = prev.cards;
+
+        if (Math.random() < 0.035) {
+          if (Math.random() < 0.55) nextHomeScore++;
+          else nextAwayScore++;
+        }
+
+        if (Math.random() < 0.11) {
+          nextCorners++;
+        }
+
+        if (Math.random() < 0.045) {
+          nextCards++;
+        }
+
+        // Stepped historical records update
+        setGoalsHistory((h) => {
+          const nextH = [...h];
+          nextH[nextMin] = nextHomeScore + nextAwayScore;
+          for (let i = nextMin + 1; i <= 90; i++) nextH[i] = 0;
+          return nextH;
+        });
+
+        setCornersHistory((h) => {
+          const nextH = [...h];
+          nextH[nextMin] = nextCorners;
+          for (let i = nextMin + 1; i <= 90; i++) nextH[i] = 0;
+          return nextH;
+        });
+
+        setCardsHistory((h) => {
+          const nextH = [...h];
+          nextH[nextMin] = nextCards;
+          for (let i = nextMin + 1; i <= 90; i++) nextH[i] = 0;
+          return nextH;
+        });
+
+        // Settle active prediction positions locally based on the simulated values
+        setPositions((prevPositions) =>
+          prevPositions.map((pos) => {
+            if (pos.matchId === match.id && pos.status === 'pending' && nextMin >= pos.strikeMinute) {
+              let actualVal = 0;
+              if (pos.asset === 'goals') actualVal = nextHomeScore + nextAwayScore;
+              else if (pos.asset === 'corners') actualVal = nextCorners;
+              else actualVal = nextCards;
+
+              const won = pos.direction === 'hi' ? actualVal > pos.strikeLevel : actualVal < pos.strikeLevel;
+              if (won) {
+                const winnings = pos.stake * pos.payout;
+                setWalletBalance((b) => b + winnings);
+                triggerConfetti();
+              }
+              return { ...pos, status: won ? 'won' : 'lost' };
+            }
+            return pos;
+          })
+        );
+
+        return {
+          ...prev,
+          minute: nextMin,
+          homeScore: nextHomeScore,
+          awayScore: nextAwayScore,
+          corners: nextCorners,
+          cards: nextCards,
+          status: 'live'
+        };
+      });
+    }, simSpeed * 1000);
+
+    return () => clearInterval(interval);
+  }, [match, isRunning, simSpeed, setPositions, setWalletBalance, triggerConfetti]);
 
   // ─── Map Current Stat Value ─────────────────────────────────────
   const currentValue = useMemo(() => {

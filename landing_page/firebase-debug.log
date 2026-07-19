@@ -1,0 +1,21 @@
+[debug] [2026-07-19T17:44:14.030Z] ----------------------------------------------------------------------
+[debug] [2026-07-19T17:44:14.045Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\antoni\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-07-19T17:44:14.046Z] CLI Version:   15.1.0
+[debug] [2026-07-19T17:44:14.047Z] Platform:      win32
+[debug] [2026-07-19T17:44:14.047Z] Node Version:  v22.16.0
+[debug] [2026-07-19T17:44:14.048Z] Time:          Sun Jul 19 2026 18:44:14 GMT+0100 (West Africa Standard Time)
+[debug] [2026-07-19T17:44:14.049Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-19T17:44:25.706Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-19T17:44:25.711Z] > authorizing via signed-in user (antobuilds@gmail.com)
+[debug] [2026-07-19T17:44:25.712Z] [iam] checking project myla-fb363 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-07-19T17:44:25.717Z] Checked if tokens are valid: false, expires at: 1784479120879
+[debug] [2026-07-19T17:44:25.718Z] Checked if tokens are valid: false, expires at: 1784479120879
+[debug] [2026-07-19T17:44:25.719Z] > refreshing access token with scopes: []
+[debug] [2026-07-19T17:44:25.728Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-07-19T17:44:25.729Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-19T17:44:26.663Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-07-19T17:44:26.663Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-19T17:44:26.700Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/myla-fb363:testIamPermissions [none]
+[debug] [2026-07-19T17:44:26.700Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/myla-fb363:testIamPermissions x-goog-quota-user=projects/myla-fb363
+[debug] [2026-07-19T17:44:26.701Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/myla-fb363:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
