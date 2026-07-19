@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { THEME } from '../theme';
-import { OptionPosition } from '../hooks/useMatchSimulation';
+import { OptionPosition } from '../hooks/useMatchContext';
 
 interface PositionsLedgerProps {
   positions: OptionPosition[];

@@ -24,7 +24,7 @@ export interface OptionPosition {
   cashOutAmount?: number;
 }
 
-export function useMatchSimulation(
+export function useMatchContext(
   match: Match | null,
   triggerConfetti: () => void,
   walletBalance: number,
@@ -196,7 +196,7 @@ export function useMatchSimulation(
       );
 
     } catch (err: any) {
-      console.warn('[useMatchSimulation] Failed to fetch live match updates from TxODDS:', err?.message || err);
+      console.warn('[useMatchContext] Failed to fetch live match updates from TxODDS:', err?.message || err);
     }
   }, [match, setPositions, setWalletBalance, triggerConfetti]);
 
@@ -262,7 +262,7 @@ export function useMatchSimulation(
     if (totalDuration <= 0) return 0;
 
     const timeElapsedRatio = (simState.minute - pos.buyMinute) / totalDuration;
-    
+
     let currentAssetVal = currentValue;
     if (pos.asset === 'goals') currentAssetVal = simState.homeScore + simState.awayScore;
     else if (pos.asset === 'cards') currentAssetVal = simState.cards;
@@ -308,7 +308,7 @@ export function useMatchSimulation(
       const scaledStrikeLevel = Math.round(selection.strikeLevel * 10);
       const deadline = Math.floor(Date.now() / 1000) + 120; // 2 minutes from now
 
-      console.log(`[useMatchSimulation] Building atomic transaction:
+      console.log(`[useMatchContext] Building atomic transaction:
         User: ${userPubkey.toBase58()}
         Match: ${match.id}
         Asset: ${asset}
@@ -334,9 +334,9 @@ export function useMatchSimulation(
       const serializedTx = transaction.serialize({ requireAllSignatures: false });
       const txBase64 = serializedTx.toString('base64');
 
-      console.log('[useMatchSimulation] Sending transaction to Mobile Wallet Adapter...');
+      console.log('[useMatchContext] Sending transaction to Mobile Wallet Adapter...');
       const txSig = await signAndSendTransaction(txBase64);
-      console.log('[useMatchSimulation] Transaction signature returned:', txSig);
+      console.log('[useMatchContext] Transaction signature returned:', txSig);
 
       // Record local position
       const oddsRatio = tradeDirection === 'hi' ? odds.hi : odds.lo;
@@ -367,14 +367,14 @@ export function useMatchSimulation(
       setSelection(null);
 
       Alert.alert(
-        'Prediction Created', 
+        'Prediction Created',
         `Your prediction has been successfully placed on-chain!\n\nSignature: ${txSig.substring(0, 12)}...`,
         [
           { text: 'OK' }
         ]
       );
     } catch (err: any) {
-      console.error('[useMatchSimulation] executeTrade failed:', err);
+      console.error('[useMatchContext] executeTrade failed:', err);
       Alert.alert('Transaction Failed', err?.message || 'Failed to place prediction on-chain.');
     } finally {
       setIsTrading(false);

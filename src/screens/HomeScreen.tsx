@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMatchFeed } from '../hooks/useMatchFeed';
 import { Match } from '../types';
 import { THEME } from '../theme';
-import { OptionPosition } from '../hooks/useMatchSimulation';
+import { OptionPosition } from '../hooks/useMatchContext';
 import { txoddsService } from '../services/txodds';
 import InteractiveMatchCard from '../components/InteractiveMatchCard';
 import ConfettiCelebration, { ConfettiParticle } from '../components/ConfettiCelebration';
@@ -67,7 +67,7 @@ export default function HomeScreen() {
     // 1. Prioritize upcoming, if upcoming filter matches nothing, default to showing what matches filter
     const filtered = matches.filter((m) => {
       const compMatches = selectedCompetition === 'All Competitions' || m.competition === selectedCompetition;
-      
+
       let statusMatches = true;
       if (statusFilter === 'live') {
         statusMatches = m.status === 'live';
@@ -75,7 +75,7 @@ export default function HomeScreen() {
         statusMatches = m.status === 'upcoming';
       }
       // 'all' includes all statuses (live, upcoming, finished)
-      
+
       return compMatches && statusMatches;
     });
 
@@ -230,7 +230,7 @@ export default function HomeScreen() {
         <Ionicons name="folder-open-outline" size={48} color="#8E8E93" style={{ marginBottom: 16 }} />
         <Text style={styles.emptyTitle}>No Matches Found</Text>
         <Text style={styles.emptySubtitle}>
-          {error 
+          {error
             ? `Failed to fetch from TxODDS: ${error}`
             : 'There are no live or scheduled World Cup matches available on the TxODDS feed right now.'}
         </Text>

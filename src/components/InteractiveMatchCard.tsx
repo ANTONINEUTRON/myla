@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../theme';
 import { Match } from '../types';
-import { useMatchSimulation, OptionPosition, OptionAsset } from '../hooks/useMatchSimulation';
+import { useMatchContext, OptionPosition, OptionAsset } from '../hooks/useMatchContext';
 import TimelineChart from './TimelineChart';
 import TradeTicket from './TradeTicket';
 import PositionsLedger from './PositionsLedger';
@@ -33,7 +33,7 @@ export default function InteractiveMatchCard({
   triggerConfetti,
   onShowStats
 }: InteractiveMatchCardProps) {
-  
+
   // Call simulation hook inside card context
   const {
     simState,
@@ -55,7 +55,7 @@ export default function InteractiveMatchCard({
     isTrading,
     cashOut,
     getCashOutAmount
-  } = useMatchSimulation(
+  } = useMatchContext(
     isExpanded ? match : null, // only simulate if expanded
     triggerConfetti,
     walletBalance,
@@ -187,8 +187,8 @@ export default function InteractiveMatchCard({
                     {tab === 'goals'
                       ? simState.homeScore + simState.awayScore
                       : tab === 'corners'
-                      ? simState.corners
-                      : simState.cards}
+                        ? simState.corners
+                        : simState.cards}
                   </Text>
                 </TouchableOpacity>
               );

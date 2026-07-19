@@ -55,7 +55,7 @@ Dynamically visualizes the Over vs Under SOL distribution bar, player counts, es
 | **Solana Integration** | Solana Mobile Stack (SMS), `@solana-mobile/mobile-wallet-adapter` |
 | **Smart Contracts** | Anchor Program (`contracts/`) |
 | **Data Oracles** | TxODDS Tx LINE Live Feeds |
-| **State Management** | Custom hooks (`useMatchSimulation`) |
+| **State Management** | Custom hooks (`useMatchContext`) |
 | **UI/Styling** | Vanilla CSS (theme system) |
 
 ---
@@ -67,7 +67,7 @@ myla/
 ├── src/                    # React Native Expo app source code
 │   ├── components/         # Reusable UI (CustomStakeModal, PoolBreakdown, TimelineChart)
 │   ├── context/            # Global Wallet Context (MWA messaging & signing)
-│   ├── hooks/              # Custom Hooks (useMatchFeed, useMatchSimulation)
+│   ├── hooks/              # Custom Hooks (useMatchFeed, useMatchContext)
 │   ├── screens/            # HomeScreen, MatchDetailsScreen (unused)
 │   ├── services/           # API Services (txoddsService)
 │   └── theme.ts            # Design system tokens
@@ -78,6 +78,7 @@ myla/
 │   └── src/
 │       └── oracle.ts       # Cron function to read TxODDS and resolve pools
 ├── docs/                   # Hackathon pitch & requirements documents
+│   └── ARCHITECTURE.md     # Technical specification & system architecture
 ├── PITCH.md                # Hackathon presentation outline
 ├── README.md               # Setup and development guide
 └── SP_BOUNTY.md            # Hackathon track requirements checklist
@@ -85,7 +86,7 @@ myla/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Prerequisites
 - Node.js (v18+)
@@ -125,7 +126,6 @@ node src/oracle.ts
 
 ---
 
-## 📬 Contact
+## Contact
 
 Built for the [Superteam World Cup Hackathon](https://superteam.fun/earn/hackathon/world-cup)  
-Questions? Reach out on [TxODDS Telegram](https://t.me/TxLINEChat)

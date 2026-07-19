@@ -49,4 +49,5 @@ SP_BOUNTY.md
 
 # backend & contracts — not part of the mobile app build
 /backend
-/contracts
+/anchor
+/landing_page
