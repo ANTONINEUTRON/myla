@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
-import { db, admin } from '../firebase';
+import { FieldValue } from 'firebase-admin/firestore';
+import { db } from '../firebase';
 
 export const joinWaitlist = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
@@ -85,7 +86,7 @@ export const joinWaitlist = functions.https.onRequest(async (req, res) => {
       name: cleanedName,
       email: cleanedEmail,
       walletAddress: cleanedWallet || null,
-      joinedAt: admin.firestore.FieldValue.serverTimestamp()
+      joinedAt: FieldValue.serverTimestamp()
     });
 
     res.status(200).json({ success: true, message: 'Successfully joined the waitlist!' });

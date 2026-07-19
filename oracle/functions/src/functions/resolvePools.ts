@@ -2,7 +2,8 @@ import * as functions from 'firebase-functions';
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import axios from 'axios';
 import { CONFIG } from '../config';
-import { db, admin } from '../firebase';
+import { FieldValue } from 'firebase-admin/firestore';
+import { db } from '../firebase';
 import { getProgram } from '../helpers/solana';
 import { extractStatValue } from '../helpers/scores';
 
@@ -63,7 +64,7 @@ async function executeSyncAndResolve() {
       actualValue: pool.actualValue,
       commissionWallet: pool.commissionWallet.toString(),
       oracle: pool.oracle.toString(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     }, { merge: true });
 
     // Fetch and Sync all bets for this pool from Solana
@@ -93,7 +94,7 @@ async function executeSyncAndResolve() {
         asset: pool.asset,
         strikeLevel: pool.strikeLevel,
         strikeMinute: pool.strikeMinute,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
       }, { merge: true });
     }
 
