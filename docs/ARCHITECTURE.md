@@ -15,17 +15,16 @@ graph TD
     User["Solana Seeker Device (Mobile App)"]
     MWA["Mobile Wallet Adapter (MWA)"]
     Solana["Solana Blockchain (Devnet)"]
-    Firebase["Firebase Functions (Oracle Backend)"]
+    Oracle["Oracle Backend"]
     TxODDS["TxODDS Fusion API"]
-    Firestore["Firestore DB"]
+    OracleStore["Firestore DB"]
 
     User -->|Sign and Send Transaction| MWA
     MWA -->|Place Bet / Claim| Solana
-    User -->|Fetch Active Matches and Odds| Firebase
-    Firebase -->|Poll Live scores and stats| TxODDS
-    Firebase -->|Sync pool and bet status| Firestore
-    User -->|Subscribe to real-time updates| Firestore
-    Firebase -->|Submit ResolvePool Tx| Solana
+    User -->|Fetch Active Matches and Odds| OracleStore
+    User -->|Subscribe to real-time updates| OracleStore
+    OracleStore -->|Poll Live scores and stats| TxODDS
+    OracleStore -->|Submit ResolvePool Tx| Solana
 ```
 
 ### End-to-End Prediction Lifecycle
