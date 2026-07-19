@@ -60,7 +60,7 @@ Dynamically visualizes the Over vs Under SOL distribution bar, player counts, es
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 myla/

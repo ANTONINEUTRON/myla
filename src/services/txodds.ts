@@ -59,6 +59,10 @@ function fixtureToMatch(f: TxFixture, scores?: TxScoreEntry[]): Match {
     if (/^\d+$/.test(startTimeVal)) {
       const valNum = parseInt(startTimeVal, 10);
       startTimeVal = valNum < 10000000000 ? valNum * 1000 : valNum;
+    } else {
+      if (!startTimeVal.endsWith('Z') && !startTimeVal.includes('+') && !startTimeVal.includes('-')) {
+        startTimeVal = startTimeVal.includes('T') ? `${startTimeVal}Z` : `${startTimeVal.replace(' ', 'T')}Z`;
+      }
     }
   }
   const startMs = new Date(startTimeVal).getTime();

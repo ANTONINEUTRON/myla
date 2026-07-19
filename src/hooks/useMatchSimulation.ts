@@ -32,8 +32,6 @@ export function useMatchSimulation(
   positions: OptionPosition[],
   setPositions: React.Dispatch<React.SetStateAction<OptionPosition[]>>
 ) {
-  const [isRunning, setIsRunning] = useState<boolean>(true);
-  const [simSpeed] = useState<number>(1.2); // seconds per match minute
   const [asset, setAsset] = useState<OptionAsset>('corners');
   const [stake, setStake] = useState<number>(0.1);
   const [tradeDirection, setTradeDirection] = useState<'hi' | 'lo'>('hi');
@@ -59,45 +57,27 @@ export function useMatchSimulation(
   const resetSimulation = useCallback(() => {
     if (!match) return;
     setSelection(null);
-    setIsRunning(true);
 
     // Default simulation starting clock
-    const startMin = match.status === 'live' ? match.minute : 0;
+    const startMin = match.status === 'live' ? match.minute : (match.status === 'finished' ? 90 : 0);
 
-    const seedHistory = (rate: number, finalVal: number) => {
-      const arr = new Array(91).fill(0);
-      let val = 0;
-      for (let m = 1; m <= 90; m++) {
-        if (m <= startMin) {
-          if (val < finalVal && Math.random() < 0.25) {
-            val += 1;
-          }
-        }
-        arr[m] = m <= startMin ? val : 0;
-      }
-      arr[startMin] = finalVal;
-      for (let m = startMin; m <= 90; m++) {
-        arr[m] = finalVal;
-      }
-      return arr;
-    };
+    const nextGoals = new Array(91).fill(0);
+    const initialGoals = match.homeScore + match.awayScore;
+    for (let m = startMin; m <= 90; m++) {
+      nextGoals[m] = initialGoals;
+    }
 
-    // For simulation re-play of finished matches, we start scores at 0 or initial values
-    const initialGoals = match.status === 'finished' ? 0 : match.homeScore + match.awayScore;
-    const initialCorners = match.status === 'live' ? Math.max(1, Math.round(startMin * 0.08)) : 0;
-    const initialCards = match.status === 'live' ? Math.max(0, Math.round(startMin * 0.04)) : 0;
-
-    setGoalsHistory(seedHistory(0.03, initialGoals));
-    setCornersHistory(seedHistory(0.12, initialCorners));
-    setCardsHistory(seedHistory(0.05, initialCards));
+    setGoalsHistory(nextGoals);
+    setCornersHistory(new Array(91).fill(0));
+    setCardsHistory(new Array(91).fill(0));
 
     setSimState({
       minute: startMin,
-      homeScore: match.status === 'finished' ? 0 : match.homeScore,
-      awayScore: match.status === 'finished' ? 0 : match.awayScore,
-      corners: initialCorners,
-      cards: initialCards,
-      status: match.status === 'finished' ? 'live' : match.status
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      corners: 0,
+      cards: 0,
+      status: match.status
     });
   }, [match]);
 
@@ -114,7 +94,9 @@ export function useMatchSimulation(
 
       // Parse current minute
       let currentMin = 0;
-      if (latest && latest.Minute !== undefined && latest.Minute !== null) {
+      if (match.status === 'finished') {
+        currentMin = 90;
+      } else if (latest && latest.Minute !== undefined && latest.Minute !== null) {
         currentMin = latest.Minute;
       } else if (latest && latest.Clock?.Seconds !== undefined && latest.Clock?.Seconds !== null) {
         currentMin = Math.floor(latest.Clock.Seconds / 60);
@@ -189,7 +171,7 @@ export function useMatchSimulation(
         awayScore: aGoals,
         corners: totalCorners,
         cards: totalCards,
-        status: 'live'
+        status: match.status
       });
 
       // Settle active prediction positions locally based on the real match stats
@@ -218,108 +200,22 @@ export function useMatchSimulation(
     }
   }, [match, setPositions, setWalletBalance, triggerConfetti]);
 
-  // ─── Live Polling from TxODDS (Only for Real Live Matches) ───────────────────
+  // ─── Live Polling from TxODDS (Only for Real Live/Finished Matches) ───────────
   useEffect(() => {
-    if (!match || match.status !== 'live') return;
+    if (!match) return;
+    if (match.status !== 'live' && match.status !== 'finished') return;
 
     // Fetch initial scores on expand
     fetchLiveScores();
 
-    // Set up polling interval every 12 seconds
-    const interval = setInterval(fetchLiveScores, 12_000);
-    return () => clearInterval(interval);
+    // Set up polling interval every 12 seconds only for live matches
+    if (match.status === 'live') {
+      const interval = setInterval(fetchLiveScores, 12_000);
+      return () => clearInterval(interval);
+    }
   }, [match, fetchLiveScores]);
 
-  // ─── Simulation Clock Loop (For Upcoming or Finished/Demo Previews) ──────────
-  useEffect(() => {
-    if (!match || !isRunning) return;
-    if (match.status === 'live') return;
 
-    const interval = setInterval(() => {
-      setSimState((prev) => {
-        if (prev.minute >= 90) {
-          setIsRunning(false);
-          return { ...prev, status: 'finished' };
-        }
-
-        const nextMin = prev.minute + 1;
-
-        // Randomly simulate event increases
-        let nextHomeScore = prev.homeScore;
-        let nextAwayScore = prev.awayScore;
-        let nextCorners = prev.corners;
-        let nextCards = prev.cards;
-
-        if (Math.random() < 0.035) {
-          if (Math.random() < 0.55) nextHomeScore++;
-          else nextAwayScore++;
-        }
-
-        if (Math.random() < 0.11) {
-          nextCorners++;
-        }
-
-        if (Math.random() < 0.045) {
-          nextCards++;
-        }
-
-        // Stepped historical records update
-        setGoalsHistory((h) => {
-          const nextH = [...h];
-          nextH[nextMin] = nextHomeScore + nextAwayScore;
-          for (let i = nextMin + 1; i <= 90; i++) nextH[i] = 0;
-          return nextH;
-        });
-
-        setCornersHistory((h) => {
-          const nextH = [...h];
-          nextH[nextMin] = nextCorners;
-          for (let i = nextMin + 1; i <= 90; i++) nextH[i] = 0;
-          return nextH;
-        });
-
-        setCardsHistory((h) => {
-          const nextH = [...h];
-          nextH[nextMin] = nextCards;
-          for (let i = nextMin + 1; i <= 90; i++) nextH[i] = 0;
-          return nextH;
-        });
-
-        // Settle active prediction positions locally based on the simulated values
-        setPositions((prevPositions) =>
-          prevPositions.map((pos) => {
-            if (pos.matchId === match.id && pos.status === 'pending' && nextMin >= pos.strikeMinute) {
-              let actualVal = 0;
-              if (pos.asset === 'goals') actualVal = nextHomeScore + nextAwayScore;
-              else if (pos.asset === 'corners') actualVal = nextCorners;
-              else actualVal = nextCards;
-
-              const won = pos.direction === 'hi' ? actualVal > pos.strikeLevel : actualVal < pos.strikeLevel;
-              if (won) {
-                const winnings = pos.stake * pos.payout;
-                setWalletBalance((b) => b + winnings);
-                triggerConfetti();
-              }
-              return { ...pos, status: won ? 'won' : 'lost' };
-            }
-            return pos;
-          })
-        );
-
-        return {
-          ...prev,
-          minute: nextMin,
-          homeScore: nextHomeScore,
-          awayScore: nextAwayScore,
-          corners: nextCorners,
-          cards: nextCards,
-          status: 'live'
-        };
-      });
-    }, simSpeed * 1000);
-
-    return () => clearInterval(interval);
-  }, [match, isRunning, simSpeed, setPositions, setWalletBalance, triggerConfetti]);
 
   // ─── Map Current Stat Value ─────────────────────────────────────
   const currentValue = useMemo(() => {
@@ -395,37 +291,13 @@ export function useMatchSimulation(
       return;
     }
 
-    if (!walletAddress) {
+    if (!walletAddress || walletAddress.startsWith('DevWallet')) {
       Alert.alert('Wallet Not Connected', 'Please connect your Solana wallet first.');
       return;
     }
 
     setIsTrading(true);
     try {
-      if (walletAddress.startsWith('DevWallet') || walletAddress === 'DevWallet111111111111111111111111111111111111') {
-        // Dev/simulated wallet flow
-        const txHash = 'mocktx' + Math.random().toString(36).substring(2, 15);
-        const oddsRatio = tradeDirection === 'hi' ? odds.hi : odds.lo;
-        const newPosition: OptionPosition = {
-          id: txHash,
-          matchId: match.id,
-          asset,
-          strikeMinute: selection.strikeMinute,
-          strikeLevel: selection.strikeLevel,
-          direction: tradeDirection,
-          buyMinute: simState.minute,
-          buyValue: currentValue,
-          stake,
-          payout: oddsRatio,
-          status: 'pending'
-        };
-        setWalletBalance((b) => parseFloat((b - stake).toFixed(2)));
-        setPositions((prev) => [newPosition, ...prev]);
-        setSelection(null);
-        Alert.alert('Prediction Created (Demo Mode)', 'Your demo prediction has been created.');
-        return;
-      }
-
       // Real Solana Devnet MWA Flow
       const userPubkey = new PublicKey(walletAddress);
       const connection = new Connection(CONFIG.SOLANA_RPC_URL, 'confirmed');
@@ -519,8 +391,6 @@ export function useMatchSimulation(
 
   return {
     simState,
-    isRunning,
-    setIsRunning,
     walletBalance,
     positions,
     asset,

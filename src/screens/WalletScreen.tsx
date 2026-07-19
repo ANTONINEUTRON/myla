@@ -18,7 +18,6 @@ export default function WalletScreen() {
   // Helper to truncate wallet address:
   const truncateAddress = (addr: string | null) => {
     if (!addr) return '';
-    if (addr === 'DevWallet111111111111111111111111111111111111') return 'Dev Wallet';
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 6)}`;
   };
 

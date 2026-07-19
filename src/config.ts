@@ -10,7 +10,13 @@ export const CONFIG = {
   // Deployed Program ID
   PROGRAM_ID: '9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf',
 
+  // Fallback defaults for Program Config
+  DEFAULT_ORACLE: 'FvPajowCadom15Nws9Zx2hEPRWSypWGKrZoAbxgf1Vrm',
+  DEFAULT_COMMISSION_WALLET: 'FvPajowCadom15Nws9Zx2hEPRWSypWGKrZoAbxgf1Vrm',
+  DEFAULT_COMMISSION_RATE: 500,
+
   // TxODDS Program ID and Mint Address (Devnet)
   TX_PROGRAM_ID: '6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J',
   TX_TOKEN_MINT: '4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG',
 };
+

@@ -14,9 +14,9 @@ export interface ProgramConfig {
 
 export let programConfig: ProgramConfig = {
   programId: CONFIG.PROGRAM_ID,
-  oracle: null,
-  commissionWallet: null,
-  commissionRate: null,
+  oracle: CONFIG.DEFAULT_ORACLE,
+  commissionWallet: CONFIG.DEFAULT_COMMISSION_WALLET,
+  commissionRate: CONFIG.DEFAULT_COMMISSION_RATE,
 };
 
 // Dynamic helper getters
@@ -75,7 +75,7 @@ export async function initializeProgramConfig(): Promise<void> {
     
     updateProgramConfig({
       programId: data.programId,
-      oracle: data.oracle,
+      oracle: data.oracle || data.oracleAddress,
       commissionWallet: data.commissionWallet,
       commissionRate: data.commissionRate,
     });

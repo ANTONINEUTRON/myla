@@ -1,0 +1,3 @@
+[submodule "contracts/myla-program"]
+	path = contracts/myla-program
+	url = https://github.com/ANTONINEUTRON/myla-program

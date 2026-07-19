@@ -31,8 +31,8 @@ export const WalletContext = createContext<WalletState>({
   isConnecting: false,
   balance: 0,
   authToken: null,
-  connect: async () => {},
-  disconnect: async () => {},
+  connect: async () => { },
+  disconnect: async () => { },
   signMessage: async () => '',
   signAndSendTransaction: async () => '',
 });
@@ -76,10 +76,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [cachedAuthToken, setCachedAuthToken] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async (address: string) => {
-    if (address === 'DevWallet111111111111111111111111111111111111' || address.startsWith('DevWallet')) {
-      setBalance(2.5);
-      return;
-    }
     try {
       const connection = new Connection(CONFIG.SOLANA_RPC_URL, 'confirmed');
       const pubkey = new PublicKey(address);
@@ -97,6 +93,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const storedAddress = await AsyncStorage.getItem('myla_wallet_address');
         const storedToken = await AsyncStorage.getItem(STORAGE_KEY_AUTH_TOKEN);
         if (storedAddress && storedToken) {
+          if (storedAddress.startsWith('DevWallet')) {
+            await AsyncStorage.multiRemove(['myla_wallet_address', STORAGE_KEY_AUTH_TOKEN]);
+            return;
+          }
           const parsedAddress = parseStoredAddress(storedAddress);
           if (parsedAddress !== storedAddress) {
             await AsyncStorage.setItem('myla_wallet_address', parsedAddress);
@@ -137,8 +137,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             const auth = await wallet.authorize({
               identity: {
                 name: 'MYLA',
-                uri: 'https://symbal.fun',
-                icon: 'favicon.ico',
+                uri: 'https://www.titalabs.xyz',
+                icon: 'branding/logo.png',
               },
               chain: 'solana:devnet',
               ...(cachedAuthToken
@@ -160,19 +160,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
               'No Solana wallet app found. Install a compatible wallet like Solflare or Phantom.'
             );
           }
-          // For other MWA errors (native module not linked, etc.), fall through to dev mode
-          console.warn(
-            'Solana Mobile Wallet Adapter unavailable, using dev fallback:',
+          console.error(
+            'Solana Mobile Wallet Adapter error:',
             mwaError?.message
           );
-          // Fall back to dev wallet
-          address = 'DevWallet111111111111111111111111111111111111';
-          authToken = 'dev-token';
+          throw mwaError;
         }
       } else {
-        // Non-Android (iOS/Web dev): use simulated wallet
-        address = 'DevWallet111111111111111111111111111111111111';
-        authToken = 'dev-token';
+        throw new Error('Solana Wallet is only supported on Android devices via Seeker/Mobile Wallet Adapter.');
       }
 
       // Persist session
@@ -210,11 +205,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Wallet not connected');
     }
 
-    if (walletAddress.startsWith('DevWallet')) {
-      // Dev mode: return a mock base64 signature
-      return Buffer.from(`mock-sig-${message}-${Date.now()}`).toString('base64');
-    }
-
     if (Platform.OS === 'android') {
       const { transact } = await import(
         '@solana-mobile/mobile-wallet-adapter-protocol'
@@ -226,8 +216,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           auth = await wallet.reauthorize({
             identity: {
               name: 'MYLA',
-              uri: 'https://symbal.fun',
-              icon: 'favicon.ico',
+              uri: 'https://www.titalabs.xyz',
+              icon: 'branding/logo.png',
             },
             auth_token: cachedAuthToken,
           });
@@ -236,8 +226,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           auth = await wallet.authorize({
             identity: {
               name: 'MYLA',
-              uri: 'https://symbal.fun',
-              icon: 'favicon.ico',
+              uri: 'https://www.titalabs.xyz',
+              icon: 'branding/logo.png',
             },
             chain: 'solana:devnet',
           });
@@ -268,12 +258,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Wallet not connected');
     }
 
-    if (walletAddress.startsWith('DevWallet')) {
-      // Dev mode: simulate transaction send and return a mock signature hash
-      const mockHash = 'mocktx' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      return mockHash;
-    }
-
     if (Platform.OS === 'android') {
       const { transact } = await import(
         '@solana-mobile/mobile-wallet-adapter-protocol'
@@ -285,8 +269,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           auth = await wallet.reauthorize({
             identity: {
               name: 'MYLA',
-              uri: 'https://symbal.fun',
-              icon: 'favicon.ico',
+              uri: 'https://www.titalabs.xyz',
+              icon: 'branding/logo.png',
             },
             auth_token: cachedAuthToken,
           });
@@ -295,8 +279,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           auth = await wallet.authorize({
             identity: {
               name: 'MYLA',
-              uri: 'https://symbal.fun',
-              icon: 'favicon.ico',
+              uri: 'https://www.titalabs.xyz',
+              icon: 'branding/logo.png',
             },
             chain: 'solana:devnet',
           });
@@ -323,7 +307,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       walletAddress,
-      isConnected: walletAddress !== null,
+      isConnected: walletAddress !== null && !walletAddress.startsWith('DevWallet'),
       isConnecting,
       balance,
       authToken: cachedAuthToken,

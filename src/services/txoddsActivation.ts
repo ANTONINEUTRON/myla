@@ -98,7 +98,7 @@ function computeDiscriminator(instructionName: string): Uint8Array {
 export async function performFreeActivation(
   walletAddress: string,
   mwaAuthToken: string | null,
-  onProgress: ActivationProgressCallback = () => {},
+  onProgress: ActivationProgressCallback = () => { },
 ): Promise<boolean> {
 
   // ── Guard: only on Android with a live MWA session ───────────────
@@ -195,14 +195,14 @@ export async function performFreeActivation(
     const subscribeIx = new TransactionInstruction({
       programId: PROGRAM_ID,
       keys: [
-        { pubkey: userPublicKey,         isSigner: true,  isWritable: true  },
-        { pubkey: pricingMatrixPda,      isSigner: false, isWritable: false },
-        { pubkey: TXL_TOKEN_MINT,        isSigner: false, isWritable: false },
-        { pubkey: userTokenAccount,      isSigner: false, isWritable: true  },
-        { pubkey: tokenTreasuryVault,    isSigner: false, isWritable: true  },
-        { pubkey: tokenTreasuryPda,      isSigner: false, isWritable: false },
+        { pubkey: userPublicKey, isSigner: true, isWritable: true },
+        { pubkey: pricingMatrixPda, isSigner: false, isWritable: false },
+        { pubkey: TXL_TOKEN_MINT, isSigner: false, isWritable: false },
+        { pubkey: userTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: tokenTreasuryVault, isSigner: false, isWritable: true },
+        { pubkey: tokenTreasuryPda, isSigner: false, isWritable: false },
         { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: SystemProgram.programId,     isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       ],
       data: ixData,
@@ -233,13 +233,13 @@ export async function performFreeActivation(
       try {
         authResult = await wallet.authorize({
           auth_token: mwaAuthToken,
-          identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
+          identity: { name: 'MYLA', uri: 'https://www.titalabs.xyz', icon: 'branding/logo.png' },
           chain: 'solana:devnet',
         });
       } catch (authError) {
         console.warn('[Activation] Token authorization failed, attempting fresh authorization:', authError);
         authResult = await wallet.authorize({
-          identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
+          identity: { name: 'MYLA', uri: 'https://www.titalabs.xyz', icon: 'branding/logo.png' },
           chain: 'solana:devnet',
         });
 
@@ -296,12 +296,12 @@ export async function performFreeActivation(
         const storedToken = await AsyncStorage.getItem('myla_wallet_auth_token');
         authResult = await wallet.authorize({
           auth_token: storedToken,
-          identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
+          identity: { name: 'MYLA', uri: 'https://www.titalabs.xyz', icon: 'branding/logo.png' },
           chain: 'solana:devnet',
         });
       } catch (authError) {
         authResult = await wallet.authorize({
-          identity: { name: 'MYLA', uri: 'https://symbal.fun', icon: 'favicon.ico' },
+          identity: { name: 'MYLA', uri: 'https://www.titalabs.xyz', icon: 'branding/logo.png' },
           chain: 'solana:devnet',
         });
       }
@@ -309,7 +309,7 @@ export async function performFreeActivation(
       // Format challenge message to sign as ${txSig}::${jwt} for empty leagues bundle
       const messageString = `${txSig}::${jwt}`;
       const msgBytes = Buffer.from(messageString, 'utf8');
-      
+
       const msgResult = await wallet.signMessages({
         addresses: [base64Address],
         payloads: [msgBytes.toString('base64')],
@@ -332,7 +332,7 @@ export async function performFreeActivation(
     onProgress('confirming');
     console.log('[Activation] Broadcasting signed transaction to chain:', txSig);
     const actualTxSig = await connection.sendRawTransaction(signedTx.serialize());
-    
+
     if (actualTxSig !== txSig) {
       console.warn(`[Activation] Signature mismatch: expected ${txSig}, got ${actualTxSig}`);
       txSig = actualTxSig;
