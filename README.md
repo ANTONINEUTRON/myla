@@ -1,27 +1,27 @@
 # MYLA — Make Your Live Assessment
 
-> **A real-time parimutuel micro-prediction terminal for the Solana Seeker, powered by TxODDS live World Cup data.**
+> **A real-time parimutuel micro-prediction terminal for football fans, powered by TxODDS TxLine Live Data Feeds.**
 
 **Built for:** Solana Seeker dapp store (React Native + Solana Mobile Stack + Custom Anchor Program)
 
 ## Live Links
 * **Landing Page**: https://myla.titalabs.xyz
-* **Devnet App Download**: [Android Build](https://expo.dev/accounts/neutronuno/projects/myla/builds/8bac31b6-3784-4913-99f7-4c92ee339c6e)
+* **Devnet App Download**: [Release APK](https://github.com/ANTONINEUTRON/myla/releases)
 
 ---
 
 ## The Pitch
 
-**Every minute of a World Cup match is a moment of drama — MYLA turns each moment into a prediction you can stake on.**
+**Every minute of a football match is a moment of drama — MYLA turns each moment into a prediction you can stake on.**
 
-MYLA is a mobile-first parimutuel micro-prediction terminal that runs in real-time during live World Cup matches. Instead of betting on the final score hours in advance or waiting for slow peer-to-peer 1v1 matchmaking, MYLA aggregates all participant capital into a shared on-chain pool (using Program Derived Addresses - PDAs).
+MYLA is a mobile-first parimutuel micro-prediction app that runs in real-time during live football matches. Instead of betting on the final score hours in advance or waiting for slow peer-to-peer 1v1 matchmaking, MYLA aggregates all participant capital into a shared on-chain pool (using Program Derived Addresses - PDAs).
 
-Stakes are locked in escrow and resolved trustlessly based on live TxODDS match data. When a pool is resolved (e.g. at Minute 45), the custom Solana program distributes the total pool proportionally among all winners, minus a 5% developer commission.
+Stakes are locked in pools and resolved trustlessly based on live TxODDS match data. When a pool is resolved (e.g. at Minute 45), the custom Solana program distributes the total pool proportionally among all winners, minus a 5% developer commission.
 
 **Why this wins:**
-- **Real-time engagement:** Turns even a 0-0 draw into a thrilling minute-by-minute experience.
-- **Parimutuel Liquidity:** No order book or waiting for counterparties — all bets go into a shared pool.
-- **Biometric confirmations:** One-tap predictions using the Solana Mobile Wallet Adapter (MWA).
+- **Real-time engagement:** Turns every minute of a football match into a thrilling moment to predict.
+- **Parimutuel Liquidity:** No order book or waiting for counterparties — all bets go into a shared pool and get distributed fairly among winners.
+- **Biometric confirmations:** One-tap predictions with wallet confirmation using the Solana Mobile Wallet Adapter (MWA).
 - **On-chain integrity:** Verified on-chain via TxODDS data and settled trustlessly.
 
 ---
@@ -35,7 +35,7 @@ A swipeable card interface showing active micro-markets (Corners, Goals, Cards) 
 Users can tap and drag on a future minute/value coordinate on a stepped line chart to select a custom prediction target (e.g. "Will Corners be Over 6.5 at Min 45?").
 
 ### Staking Presets & Custom Input
-Select standard presets (`0.05`, `0.1`, `0.25`, `0.5`, `1.0` SOL) or specify a custom stake size through a biometric-authorized dialog.
+Select standard presets (`0.05`, `0.1`,`0.5` SOL) or specify a custom stake size through a biometric-authorized dialog.
 
 ### Live Pool Breakdown Panel
 Dynamically visualizes the Over vs Under SOL distribution bar, player counts, estimated payout, net profit, effective odds, and your percentage share of the winning pool.
@@ -44,6 +44,14 @@ Dynamically visualizes the Over vs Under SOL distribution bar, player counts, es
 - Message signing and transaction authorization via `@solana-mobile/mobile-wallet-adapter`.
 - Hardware wallet confirmation via native biometrics.
 - Support for devnet test environments.
+
+---
+
+## Business Model
+
+MYLA operates on a simple, risk-free revenue model:
+- **Platform Commission:** A flat 5% fee is deducted from the total winning pool before payouts are distributed to the winners. 
+- **Zero House Risk:** Because all markets are parimutuel (community-driven pools), the platform does not act as a bookmaker and takes no positional risk. All payouts are purely funded by the participants' staked capital.
 
 ---
 
