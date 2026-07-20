@@ -507,6 +507,67 @@ body.light-theme .theme-toggle-btn .moon-icon {
   transition: color var(--transition-speed);
 }
 
+/* --- How it Works Section --- */
+.how-it-works-section {
+  padding-top: 100px;
+  padding-bottom: 100px;
+  border-top: 1px solid var(--border-color);
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+}
+
+.step-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 32px;
+  position: relative;
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+.step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.04);
+}
+
+.step-number {
+  font-family: var(--font-family-display);
+  font-size: 100px;
+  font-weight: 800;
+  color: var(--primary-color);
+  opacity: 0.06;
+  position: absolute;
+  top: -16px;
+  right: -8px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.step-card h3 {
+  font-family: var(--font-family-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  transition: color var(--transition-speed);
+  position: relative;
+  z-index: 1;
+  margin-top: 16px;
+}
+
+.step-card p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  transition: color var(--transition-speed);
+  position: relative;
+  z-index: 1;
+}
+
 /* --- Modal Overlay Sheet --- */
 .modal-overlay {
   position: fixed;

@@ -4,9 +4,9 @@
 
 **Built for:** Solana Seeker dapp store (React Native + Solana Mobile Stack + Custom Anchor Program)
 
-## 📲 App Download
-Access the latest MYLA mobile app build directly on your Seeker device or Android Device:
-* **Devnet Build Download**: [Expo Build](https://expo.dev/accounts/neutronuno/projects/myla/builds/0fdac73b-15bc-4cbe-8a61-b2cc36929680)
+## Live Links
+* **Landing Page**: https://myla.titalabs.xyz
+* **Devnet App Download**: [Expo Build](https://expo.dev/accounts/neutronuno/projects/myla/builds/0fdac73b-15bc-4cbe-8a61-b2cc36929680)
 
 ---
 
@@ -53,7 +53,7 @@ Dynamically visualizes the Over vs Under SOL distribution bar, player counts, es
 |-------|-----------|
 | **Mobile App** | React Native (Expo, TypeScript) |
 | **Solana Integration** | Solana Mobile Stack (SMS), `@solana-mobile/mobile-wallet-adapter` |
-| **Smart Contracts** | Anchor Program (`contracts/`) |
+| **Smart Contracts** | Anchor Program (`anchor/`) |
 | **Data Oracles** | TxODDS Tx LINE Live Feeds |
 | **State Management** | Custom hooks (`useMatchContext`) |
 | **UI/Styling** | Vanilla CSS (theme system) |
@@ -68,15 +68,15 @@ myla/
 │   ├── components/         # Reusable UI (CustomStakeModal, PoolBreakdown, TimelineChart)
 │   ├── context/            # Global Wallet Context (MWA messaging & signing)
 │   ├── hooks/              # Custom Hooks (useMatchFeed, useMatchContext)
-│   ├── screens/            # HomeScreen, MatchDetailsScreen (unused)
+│   ├── screens/            # HomeScreen
 │   ├── services/           # API Services (txoddsService)
 │   └── theme.ts            # Design system tokens
-├── contracts/              # Solana Anchor smart contracts
+├── anchor/                 # Solana Anchor smart contracts
 │   ├── programs/           # On-chain parimutuel pool programs
 │   └── tests/              # Anchor test suite
-├── backend/                # Off-chain oracle resolution backend
-│   └── src/
-│       └── oracle.ts       # Cron function to read TxODDS and resolve pools
+├── landing_page/           # Web landing page (Firebase Hosting)
+├── oracle/                 # Off-chain oracle resolution backend (Firebase Functions)
+│   └── functions/src/      # Cron function to read TxODDS and resolve pools
 ├── docs/                   # Hackathon pitch & requirements documents
 │   └── ARCHITECTURE.md     # Technical specification & system architecture
 ├── PITCH.md                # Hackathon presentation outline
@@ -91,7 +91,7 @@ myla/
 ### 1. Prerequisites
 - Node.js (v18+)
 - Expo CLI (`npm install -g expo-cli`)
-- Anchor CLI (for smart contract development)
+- Anchor CLI (for smart contract)
 
 ### 2. Install Dependencies
 ```bash
@@ -101,7 +101,7 @@ npm install
 ### 3. Run the Mobile App
 Start the Expo development server:
 ```bash
-npm run dev
+npx expo start
 ```
 To run on an Android emulator or a physical Seeker device:
 ```bash
@@ -111,21 +111,19 @@ npm run android
 ### 4. Smart Contracts
 To build and test the Solana program:
 ```bash
-cd contracts
+cd anchor
 anchor build
 anchor test
 ```
 
 ### 5. Run the Oracle
-To start the oracle resolver script:
+To build the Firebase Functions oracle resolver:
 ```bash
-cd backend
+cd oracle/functions
 npm install
-node src/oracle.ts
+npm run build
 ```
 
 ---
-
-## Contact
 
 Built for the [Superteam World Cup Hackathon](https://superteam.fun/earn/hackathon/world-cup)  
