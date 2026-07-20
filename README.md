@@ -6,7 +6,7 @@
 
 ## Live Links
 * **Landing Page**: https://myla.titalabs.xyz
-* **Devnet App Download**: [Expo Build](https://expo.dev/accounts/neutronuno/projects/myla/builds/0fdac73b-15bc-4cbe-8a61-b2cc36929680)
+* **Devnet App Download**: [Android Build](https://expo.dev/accounts/neutronuno/projects/myla/builds/8bac31b6-3784-4913-99f7-4c92ee339c6e)
 
 ---
 
