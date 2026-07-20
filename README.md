@@ -63,8 +63,6 @@ MYLA operates on a simple, risk-free revenue model:
 | **Solana Integration** | Solana Mobile Stack (SMS), `@solana-mobile/mobile-wallet-adapter` |
 | **Smart Contracts** | Anchor Program (`anchor/`) |
 | **Data Oracles** | TxODDS Tx LINE Live Feeds |
-| **State Management** | Custom hooks (`useMatchContext`) |
-| **UI/Styling** | Vanilla CSS (theme system) |
 
 ---
 
