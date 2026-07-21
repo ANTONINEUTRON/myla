@@ -7,6 +7,7 @@
 ## Live Links
 * **Landing Page**: https://myla.titalabs.xyz
 * **Devnet App Download**: [Release APK](https://github.com/ANTONINEUTRON/myla/releases)
+* **Smart Contract (Devnet)**: [`9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf`](https://solscan.io/account/9AhsF4FXa6GPqVWJEaCdPeK3jptuGPfZpDk24Co5odsf?cluster=devnet) 
 
 ---
 
